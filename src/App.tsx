@@ -544,8 +544,8 @@ function ProjectLogo({ url, className }: { url: string; className?: string }) {
     return <img src={url} alt="" className={`${className ?? ''} drop-shadow-lg`} />;
   }
   return (
-    <div className="rounded-lg bg-white/95 p-2 shadow-lg backdrop-blur-sm">
-      <img src={url} alt="" className={`${className ?? ''} object-contain`} />
+    <div className="flex h-24 w-56 items-center justify-center overflow-hidden rounded-lg bg-white/95 shadow-lg backdrop-blur-sm sm:h-28 sm:w-64">
+      <img src={url} alt="" className="h-full w-full object-contain" />
     </div>
   );
 }
@@ -605,7 +605,7 @@ function ProjectsSliderSection() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <ProjectLogo url={project.logo_url} className="h-16 w-auto sm:h-20" />
+                        <ProjectLogo url={project.logo_url} className="h-24 w-56 sm:h-28 sm:w-64" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12">
@@ -1358,7 +1358,7 @@ function RecentProjectsPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <ProjectLogo url={project.logo_url} className="h-16 w-auto sm:h-20" />
+                        <ProjectLogo url={project.logo_url} className="h-24 w-56 sm:h-28 sm:w-64" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-14">
