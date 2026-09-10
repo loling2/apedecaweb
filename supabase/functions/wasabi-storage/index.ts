@@ -5,7 +5,6 @@ import {
   GetObjectCommand,
 } from "npm:@aws-sdk/client-s3@3.645.0";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.645.0";
-import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,43 +12,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-async function getWasabiConfig() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? Deno.env.get("VITE_SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !serviceKey) {
-    return null;
-  }
-
-  const client = createClient(supabaseUrl, serviceKey);
-  const { data, error } = await client
-    .from("storage_config")
-    .select("key, value");
-
-  if (error || !data) return null;
-
-  const config: Record<string, string> = {};
-  for (const row of data) {
-    config[row.key] = row.value;
-  }
-
-  return {
-    accessKey: config["WASABI_ACCESS_KEY"],
-    secretKey: config["WASABI_SECRET_KEY"],
-    bucketName: config["WASABI_BUCKET_NAME"],
-    endpoint: config["WASABI_ENDPOINT"],
-  };
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
   try {
-    const config = await getWasabiConfig();
+    const accessKey = Deno.env.get("WASABI_ACCESS_KEY");
+    const secretKey = Deno.env.get("WASABI_SECRET_KEY");
+    const bucketName = Deno.env.get("WASABI_BUCKET_NAME");
+    const endpoint = Deno.env.get("WASABI_ENDPOINT");
 
-    if (!config || !config.accessKey || !config.secretKey || !config.bucketName || !config.endpoint) {
+    if (!accessKey || !secretKey || !bucketName || !endpoint) {
       return new Response(
         JSON.stringify({ error: "Wasabi credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -58,10 +32,10 @@ Deno.serve(async (req: Request) => {
 
     const s3 = new S3Client({
       region: "eu-central-1",
-      endpoint: config.endpoint,
+      endpoint,
       credentials: {
-        accessKeyId: config.accessKey,
-        secretAccessKey: config.secretKey,
+        accessKeyId: accessKey,
+        secretAccessKey: secretKey,
       },
       forcePathStyle: true,
     });
@@ -69,11 +43,11 @@ Deno.serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.searchParams.get("action") || "upload";
 
-    // ── UPLOAD ──────────────────────────────────────────
+    // ── UPLOAD ───────────────────────────────────────────
     if (req.method === "POST" && action === "upload") {
       const contentType = req.headers.get("Content-Type") || "application/octet-stream";
       const fileName = url.searchParams.get("filename") || `file-${Date.now()}`;
-      const folder = url.searchParams.get("folder") || "2026";
+      const folder = url.searchParams.get("folder") || "general";
       const ext = fileName.includes(".") ? fileName.split(".").pop() : "bin";
       const key = `2026/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
@@ -81,14 +55,14 @@ Deno.serve(async (req: Request) => {
 
       await s3.send(
         new PutObjectCommand({
-          Bucket: config.bucketName,
+          Bucket: bucketName,
           Key: key,
           Body: new Uint8Array(body),
           ContentType: contentType,
         }),
       );
 
-      const publicUrl = `${config.endpoint}/${config.bucketName}/${key}`;
+      const publicUrl = `${endpoint.replace(/\/$/, "")}/${bucketName}/${key}`;
 
       return new Response(
         JSON.stringify({ path: key, url: publicUrl }),
@@ -108,7 +82,7 @@ Deno.serve(async (req: Request) => {
 
       const signedUrl = await getSignedUrl(
         s3,
-        new GetObjectCommand({ Bucket: config.bucketName, Key: key }),
+        new GetObjectCommand({ Bucket: bucketName, Key: key }),
         { expiresIn: 3600 },
       );
 
@@ -126,7 +100,7 @@ Deno.serve(async (req: Request) => {
       }
 
       await s3.send(
-        new DeleteObjectCommand({ Bucket: config.bucketName, Key: key }),
+        new DeleteObjectCommand({ Bucket: bucketName, Key: key }),
       );
 
       return new Response(
