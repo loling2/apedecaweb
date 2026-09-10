@@ -36,6 +36,7 @@ import {
   updateSettings,
   uploadImage,
   uploadDocument,
+  testWasabiUpload,
   fetchProjects,
   createProject,
   updateProject,
@@ -1125,6 +1126,8 @@ function SettingsTab() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   useEffect(() => { fetchSettings().then(setSettings).catch(() => setError('No se pudieron cargar los ajustes.')).finally(() => setLoading(false)); }, []);
 
@@ -1139,6 +1142,13 @@ function SettingsTab() {
     } catch { setError('No se pudieron guardar los ajustes.'); } finally { setSaving(false); }
   }
 
+  async function runTest() {
+    setTesting(true); setTestResult(null);
+    const result = await testWasabiUpload();
+    setTestResult(result);
+    setTesting(false);
+  }
+
   if (loading) return <div className="p-10 text-slate-500">Cargando ajustes…</div>;
   if (!settings) return <div className="p-10 text-red-600">No se encontraron los ajustes.</div>;
 
@@ -1147,7 +1157,20 @@ function SettingsTab() {
       <h1 className="text-3xl font-light text-slate-900">Ajustes del sitio</h1>
       <p className="mt-2 text-slate-500">Cambia el logo, los datos de contacto y las redes sociales que aparecen en toda la web.</p>
 
-      <form onSubmit={submit} className="mt-8 space-y-6">
+      <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Prueba de conexión a Wasabi</h2>
+        <p className="mt-1 text-sm text-slate-500">Verifica que las credenciales de Wasabi están configuradas y que se pueden subir archivos.</p>
+        <button onClick={runTest} disabled={testing} className="mt-3 flex items-center gap-2 rounded-lg bg-sky-500 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:opacity-60">
+          {testing ? 'Probando…' : 'Probar conexión'}
+        </button>
+        {testResult && (
+          <div className={`mt-3 rounded-lg p-3 text-sm ${testResult.ok ? 'bg-lime-50 text-lime-800' : 'bg-red-50 text-red-800'}`}>
+            {testResult.ok ? '✓ ' : '✗ '}{testResult.message}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={submit} className="mt-6 space-y-6">
         <ImageInput label="Logo del sitio" value={settings.logo_url ?? ''} onChange={(v) => setSettings({ ...settings, logo_url: v })} />
         <Field label="Nombre del sitio"><input value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className={inputClass} /></Field>
         <div className="grid grid-cols-2 gap-4">
@@ -1212,7 +1235,10 @@ function ImageInput({ label, value, onChange }: { label: string; value: string; 
     try {
       const url = await uploadImage(file);
       onChange(url);
-    } catch { setError('No se pudo subir la imagen.'); } finally { setUploading(false); }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`No se pudo subir la imagen: ${msg}`);
+    } finally { setUploading(false); }
   }
 
   return (

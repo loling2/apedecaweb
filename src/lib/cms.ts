@@ -218,6 +218,31 @@ export async function updateSettings(input: Partial<CmsSettings>): Promise<CmsSe
 
 // ===== FILE UPLOADS (Wasabi via edge function) =====
 
+export async function testWasabiUpload(): Promise<{ ok: boolean; message: string; url?: string }> {
+  const params = new URLSearchParams({ action: 'upload', folder: 'test', filename: 'test-connection.txt' });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(`${functionUrl}?${params}`, {
+      method: 'POST',
+      headers: { ...functionHeaders, 'Content-Type': 'text/plain' },
+      body: 'apedeca-test-connection',
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { ok: false, message: `Error ${res.status}: ${err.error || res.statusText || 'desconocido'}` };
+    }
+    const data = await res.json();
+    return { ok: true, message: 'Conexión correcta. Archivo de prueba subido a Wasabi.', url: data.url };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { ok: false, message: `No se pudo conectar: ${msg}` };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function uploadImage(file: File): Promise<string> {
   const params = new URLSearchParams({
     action: 'upload',
