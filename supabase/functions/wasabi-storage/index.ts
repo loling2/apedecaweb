@@ -84,6 +84,18 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    if (action === "download" || action === "serve") {
+      const key = url.searchParams.get("key");
+      if (!key) return new Response(JSON.stringify({ error: "Missing key" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const response = await signedRequest("GET", key, new Uint8Array());
+      if (!response.ok) {
+        return new Response(JSON.stringify({ error: `Wasabi respondió ${response.status}` }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      const cacheHeaders = { ...corsHeaders, "Content-Type": contentType, "Cache-Control": "public, max-age=86400" };
+      return new Response(response.body, { status: 200, headers: cacheHeaders });
+    }
+
     if (req.method === "POST" && (action === "test" || action === "upload")) {
       const isTest = action === "test";
       const key = isTest
@@ -109,7 +121,9 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      return new Response(JSON.stringify({ path: key, url: `${config.endpoint}/${config.bucket}/${key}` }), {
+      const publicUrl = `${config.endpoint.replace("https://", "https://")}/${config.bucket}/${key}`;
+      const serveUrl = `${url.origin}/functions/v1/wasabi-storage?action=download&key=${encodeURIComponent(key)}`;
+      return new Response(JSON.stringify({ path: key, url: serveUrl, wasabi_url: publicUrl }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
