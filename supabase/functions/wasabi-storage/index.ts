@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
 } from "npm:@aws-sdk/client-s3@3.645.0";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.645.0";
 
@@ -25,7 +26,15 @@ Deno.serve(async (req: Request) => {
 
     if (!accessKey || !secretKey || !bucketName || !endpoint) {
       return new Response(
-        JSON.stringify({ error: "Wasabi credentials not configured" }),
+        JSON.stringify({
+          error: "Faltan secretos de Wasabi",
+          missing: {
+            accessKey: !accessKey,
+            secretKey: !secretKey,
+            bucketName: !bucketName,
+            endpoint: !endpoint,
+          },
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -50,6 +59,52 @@ Deno.serve(async (req: Request) => {
       forcePathStyle: true,
     });
 
+    // ── TEST (HEAD bucket + small upload + delete) ──────
+    if (req.method === "POST" && action === "test") {
+      const testKey = `2026/test/test-${Date.now()}.txt`;
+
+      // 1. Check bucket exists / reachable
+      try {
+        await s3.send(new HeadBucketCommand({ Bucket: bucketName }));
+      } catch (headErr) {
+        const msg = headErr instanceof Error ? headErr.message : String(headErr);
+        return new Response(
+          JSON.stringify({ error: `No se puede acceder al bucket "${bucketName}" en ${endpoint}: ${msg}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 2. Upload a tiny file
+      try {
+        await s3.send(
+          new PutObjectCommand({
+            Bucket: bucketName,
+            Key: testKey,
+            Body: new TextEncoder().encode("apedeca-test"),
+            ContentType: "text/plain",
+          }),
+        );
+      } catch (putErr) {
+        const msg = putErr instanceof Error ? putErr.message : String(putErr);
+        return new Response(
+          JSON.stringify({ error: `Bucket accesible pero no se pudo subir: ${msg}` }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // 3. Clean up
+      try {
+        await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: testKey }));
+      } catch (_delErr) {
+        // ignore cleanup failure
+      }
+
+      return new Response(
+        JSON.stringify({ ok: true, message: "Bucket accesible y subida correcta." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // ── UPLOAD ───────────────────────────────────────────
     if (req.method === "POST" && action === "upload") {
       const contentType = req.headers.get("Content-Type") || "application/octet-stream";
@@ -67,7 +122,6 @@ Deno.serve(async (req: Request) => {
           Body: new Uint8Array(body),
           ContentType: contentType,
         }),
-        { abortSignal: AbortSignal.timeout(10000) },
       );
 
       const publicUrl = `${endpoint.replace(/\/$/, "")}/${bucketName}/${key}`;
@@ -122,11 +176,10 @@ Deno.serve(async (req: Request) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    const message = err instanceof DOMException && err.name === "TimeoutError"
-      ? "Wasabi no respondió dentro del tiempo límite. Comprueba el endpoint y el bucket."
-      : err instanceof Error ? err.message : "Internal error";
+    const message = err instanceof Error ? err.message : "Internal error";
+    const name = err instanceof Error ? err.name : "Unknown";
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: message, name }),
       { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
