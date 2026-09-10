@@ -66,6 +66,8 @@ import {
   type TransparencyDoc,
 } from '@/lib/cms';
 import CmsPanel from '@/components/CmsPanel';
+import { hasSupabaseConfig } from '@/lib/supabase';
+import { fallbackNavItems, fallbackSettings, fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
 
 type AuthMode = 'sign-in' | 'sign-up';
 
@@ -82,7 +84,8 @@ function App() {
 
   useEffect(() => {
     void loadContent();
-    supabase.auth.getSession().then(({ data }) => setSessionEmail(data.session?.user.email ?? null));
+    if (!hasSupabaseConfig) return;
+    supabase.auth.getSession().then(({ data }) => setSessionEmail(data.session?.user.email ?? null)).catch(() => {});
     const { data: listener } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       setSessionEmail(currentSession?.user.email ?? null);
     });
@@ -90,12 +93,23 @@ function App() {
   }, []);
 
   async function loadContent() {
+    if (!hasSupabaseConfig) {
+      setNavItems(fallbackNavItems);
+      setSettings(fallbackSettings);
+      setLoadingContent(false);
+      return;
+    }
     try {
-      const [nav, stt] = await Promise.all([fetchNavItems(), fetchSettings()]);
+      const [nav, stt] = await Promise.all([
+        fetchNavItems().catch(() => fallbackNavItems),
+        fetchSettings().catch(() => fallbackSettings),
+      ]);
       setNavItems(nav);
       setSettings(stt);
     } catch {
-      setContentError('No se pudo cargar el contenido guardado.');
+      setNavItems(fallbackNavItems);
+      setSettings(fallbackSettings);
+      setContentError('No se pudo conectar con la base de datos. Mostrando contenido de muestra.');
     } finally {
       setLoadingContent(false);
     }
@@ -275,6 +289,15 @@ function DynamicPage({ slug }: { slug: string }) {
     setLoading(true);
     setNotFound(false);
     (async () => {
+      if (!hasSupabaseConfig) {
+        const found = fallbackPages.find((p) => p.slug === slug);
+        if (!found || !found.is_visible) { if (active) setNotFound(true); setLoading(false); return; }
+        if (!active) return;
+        setPage(found);
+        setBlocks((fallbackBlocks[found.id] ?? []).filter((b) => b.is_visible).sort((a, b) => a.sort_order - b.sort_order));
+        setLoading(false);
+        return;
+      }
       try {
         const allPages = await fetchPages();
         const found = allPages.find((p) => p.slug === slug);
@@ -284,7 +307,13 @@ function DynamicPage({ slug }: { slug: string }) {
         setPage(found);
         setBlocks(blks.filter((b) => b.is_visible).sort((a, b) => a.sort_order - b.sort_order));
       } catch {
-        if (active) setNotFound(true);
+        const found = fallbackPages.find((p) => p.slug === slug);
+        if (found && found.is_visible && active) {
+          setPage(found);
+          setBlocks((fallbackBlocks[found.id] ?? []).filter((b) => b.is_visible).sort((a, b) => a.sort_order - b.sort_order));
+        } else if (active) {
+          setNotFound(true);
+        }
       } finally {
         if (active) setLoading(false);
       }

@@ -63,75 +63,75 @@ export type NavItemInput = Omit<CmsNavItem, 'id'> & { id?: string };
 // ===== PAGES =====
 
 export async function fetchPages(): Promise<CmsPage[]> {
-  const { data, error } = await supabase.from('cms_pages').select('*').order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_pages').select('*').order('sort_order');
   if (error) throw error;
   return data as CmsPage[];
 }
 
 export async function fetchPageBySlug(slug: string): Promise<CmsPage | null> {
-  const { data, error } = await supabase.from('cms_pages').select('*').eq('slug', slug).maybeSingle();
+  const { data, error } = await supabase.from('ape_cms_pages').select('*').eq('slug', slug).maybeSingle();
   if (error) throw error;
   return data as CmsPage | null;
 }
 
 export async function createPage(input: PageInput): Promise<CmsPage> {
-  const { data, error } = await supabase.from('cms_pages').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_pages').insert(input).select().single();
   if (error) throw error;
   return data as CmsPage;
 }
 
 export async function updatePage(id: string, input: Partial<PageInput>): Promise<CmsPage> {
-  const { data, error } = await supabase.from('cms_pages').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  const { data, error } = await supabase.from('ape_cms_pages').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
   if (error) throw error;
   return data as CmsPage;
 }
 
 export async function deletePage(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_pages').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_pages').delete().eq('id', id);
   if (error) throw error;
 }
 
 // ===== BLOCKS =====
 
 export async function fetchBlocks(pageId: string): Promise<CmsBlock[]> {
-  const { data, error } = await supabase.from('cms_blocks').select('*').eq('page_id', pageId).order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_blocks').select('*').eq('page_id', pageId).order('sort_order');
   if (error) throw error;
   return data as CmsBlock[];
 }
 
 export async function createBlock(input: BlockInput): Promise<CmsBlock> {
-  const { data, error } = await supabase.from('cms_blocks').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_blocks').insert(input).select().single();
   if (error) throw error;
   return data as CmsBlock;
 }
 
 export async function updateBlock(id: string, input: Partial<BlockInput>): Promise<CmsBlock> {
-  const { data, error } = await supabase.from('cms_blocks').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  const { data, error } = await supabase.from('ape_cms_blocks').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
   if (error) throw error;
   return data as CmsBlock;
 }
 
 export async function deleteBlock(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_blocks').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_blocks').delete().eq('id', id);
   if (error) throw error;
 }
 
 // ===== DOCUMENTS =====
 
 export async function fetchDocuments(blockId: string): Promise<CmsDocument[]> {
-  const { data, error } = await supabase.from('cms_documents').select('*').eq('block_id', blockId).order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_documents').select('*').eq('block_id', blockId).order('sort_order');
   if (error) throw error;
   return data as CmsDocument[];
 }
 
 export async function createDocument(input: { block_id: string; title: string; file_path: string; sort_order?: number }): Promise<CmsDocument> {
-  const { data, error } = await supabase.from('cms_documents').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_documents').insert(input).select().single();
   if (error) throw error;
   return data as CmsDocument;
 }
 
 export async function deleteDocument(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_documents').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_documents').delete().eq('id', id);
   if (error) throw error;
 }
 
@@ -180,38 +180,38 @@ export async function deleteProject(id: string): Promise<void> {
 // ===== NAV ITEMS =====
 
 export async function fetchNavItems(): Promise<CmsNavItem[]> {
-  const { data, error } = await supabase.from('cms_nav_items').select('*').order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_nav_items').select('*').order('sort_order');
   if (error) throw error;
   return data as CmsNavItem[];
 }
 
 export async function createNavItem(input: NavItemInput): Promise<CmsNavItem> {
-  const { data, error } = await supabase.from('cms_nav_items').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_nav_items').insert(input).select().single();
   if (error) throw error;
   return data as CmsNavItem;
 }
 
 export async function updateNavItem(id: string, input: Partial<NavItemInput>): Promise<CmsNavItem> {
-  const { data, error } = await supabase.from('cms_nav_items').update(input).eq('id', id).select().single();
+  const { data, error } = await supabase.from('ape_cms_nav_items').update(input).eq('id', id).select().single();
   if (error) throw error;
   return data as CmsNavItem;
 }
 
 export async function deleteNavItem(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_nav_items').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_nav_items').delete().eq('id', id);
   if (error) throw error;
 }
 
 // ===== SETTINGS =====
 
 export async function fetchSettings(): Promise<CmsSettings | null> {
-  const { data, error } = await supabase.from('cms_settings').select('*').eq('id', 1).maybeSingle();
+  const { data, error } = await supabase.from('ape_cms_settings').select('*').eq('id', 1).maybeSingle();
   if (error) throw error;
   return data as CmsSettings | null;
 }
 
 export async function updateSettings(input: Partial<CmsSettings>): Promise<CmsSettings> {
-  const { data, error } = await supabase.from('cms_settings').update({ ...input, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
+  const { data, error } = await supabase.from('ape_cms_settings').update({ ...input, updated_at: new Date().toISOString() }).eq('id', 1).select().single();
   if (error) throw error;
   return data as CmsSettings;
 }
@@ -302,68 +302,68 @@ export type TransparencyDoc = {
 };
 
 export async function fetchTransparencySections(): Promise<TransparencySection[]> {
-  const { data, error } = await supabase.from('cms_transparency_sections').select('*').order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_transparency_sections').select('*').order('sort_order');
   if (error) throw error;
   return data as TransparencySection[];
 }
 
 export async function createTransparencySection(input: { label: string; icon_name?: string; tone?: string; sort_order?: number; meta?: string | null }): Promise<TransparencySection> {
-  const { data, error } = await supabase.from('cms_transparency_sections').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_transparency_sections').insert(input).select().single();
   if (error) throw error;
   return data as TransparencySection;
 }
 
 export async function updateTransparencySection(id: string, input: Partial<TransparencySection>): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_sections').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_sections').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
 
 export async function deleteTransparencySection(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_sections').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_sections').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function fetchTransparencyItems(sectionId: string): Promise<TransparencyItem[]> {
-  const { data, error } = await supabase.from('cms_transparency_items').select('*').eq('section_id', sectionId).order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_transparency_items').select('*').eq('section_id', sectionId).order('sort_order');
   if (error) throw error;
   return data as TransparencyItem[];
 }
 
 export async function createTransparencyItem(input: { section_id: string; title: string; body?: string | null; download_label?: string | null; file_path?: string | null; sort_order?: number; is_open_by_default?: boolean }): Promise<TransparencyItem> {
-  const { data, error } = await supabase.from('cms_transparency_items').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_transparency_items').insert(input).select().single();
   if (error) throw error;
   return data as TransparencyItem;
 }
 
 export async function updateTransparencyItem(id: string, input: Partial<TransparencyItem>): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_items').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_items').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
 
 export async function deleteTransparencyItem(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_items').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_items').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function fetchTransparencyDocs(itemId: string): Promise<TransparencyDoc[]> {
-  const { data, error } = await supabase.from('cms_transparency_docs').select('*').eq('item_id', itemId).order('sort_order');
+  const { data, error } = await supabase.from('ape_cms_transparency_docs').select('*').eq('item_id', itemId).order('sort_order');
   if (error) throw error;
   return data as TransparencyDoc[];
 }
 
 export async function createTransparencyDoc(input: { item_id: string; title: string; file_path: string; sort_order?: number }): Promise<TransparencyDoc> {
-  const { data, error } = await supabase.from('cms_transparency_docs').insert(input).select().single();
+  const { data, error } = await supabase.from('ape_cms_transparency_docs').insert(input).select().single();
   if (error) throw error;
   return data as TransparencyDoc;
 }
 
 export async function updateTransparencyDoc(id: string, input: Partial<TransparencyDoc>): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_docs').update(input).eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_docs').update(input).eq('id', id);
   if (error) throw error;
 }
 
 export async function deleteTransparencyDoc(id: string): Promise<void> {
-  const { error } = await supabase.from('cms_transparency_docs').delete().eq('id', id);
+  const { error } = await supabase.from('ape_cms_transparency_docs').delete().eq('id', id);
   if (error) throw error;
 }
 
