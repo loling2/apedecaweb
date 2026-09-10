@@ -1,5 +1,3 @@
-import { createHmac, createHash } from "node:crypto";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -8,15 +6,34 @@ const corsHeaders = {
 
 // ── AWS Signature V4 helpers (node:crypto) ────────────
 
-function hmac(key: Buffer | string, message: string): Buffer {
-  return createHmac("sha256", key).update(message, "utf8").digest();
+async function hmac(key: Uint8Array | string, message: string): Promise<Uint8Array> {
+  const rawKey = typeof key === "string" ? new TextEncoder().encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    rawKey,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(message));
+  return new Uint8Array(signature);
 }
 
-function sha256Hex(data: string | Buffer): string {
-  return createHash("sha256").update(data, "utf8").digest("hex");
+async function sha256Hex(data: string | Uint8Array): Promise<string> {
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+} 
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
-function awsSignV4(opts: {
+async function awsSignV4(opts: {
   method: string;
   host: string;
   path: string;
@@ -26,7 +43,7 @@ function awsSignV4(opts: {
   secretKey: string;
   headers: Record<string, string>;
   bodyHex: string;
-}): Record<string, string> {
+}): Promise<Record<string, string>> {
   const { method, host, path, region, service, accessKey, secretKey, headers, bodyHex } = opts;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -60,14 +77,14 @@ function awsSignV4(opts: {
     "AWS4-HMAC-SHA256",
     amzDate,
     credentialScope,
-    sha256Hex(canonicalRequest),
+    await sha256Hex(canonicalRequest),
   ].join("\n");
 
-  const kDate = hmac(`AWS4${secretKey}`, dateStamp);
-  const kRegion = hmac(kDate, region);
-  const kService = hmac(kRegion, service);
-  const kSigning = hmac(kService, "aws4_request");
-  const signature = hmac(kSigning, stringToSign).toString("hex");
+  const kDate = await hmac(`AWS4${secretKey}`, dateStamp);
+  const kRegion = await hmac(kDate, region);
+  const kService = await hmac(kRegion, service);
+  const kSigning = await hmac(kService, "aws4_request");
+  const signature = bytesToHex(await hmac(kSigning, stringToSign));
 
   const authHeader =
     `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
@@ -139,9 +156,9 @@ Deno.serve(async (req: Request) => {
       }
 
       const path = `/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`;
-      const bodyHex = sha256Hex(Buffer.from(bodyBytes));
+      const bodyHex = await sha256Hex(bodyBytes);
 
-      const signedHeaders = awsSignV4({
+      const signedHeaders = await awsSignV4({
         method: "PUT",
         host,
         path,
@@ -156,7 +173,7 @@ Deno.serve(async (req: Request) => {
       const res = await fetch(`https://${host}${path}`, {
         method: "PUT",
         headers: signedHeaders,
-        body,
+        body: bodyBytes,
       });
 
       if (!res.ok) {
@@ -174,7 +191,7 @@ Deno.serve(async (req: Request) => {
       if (action === "test") {
         // Delete the test file
         const delPath = `/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`;
-        const delHeaders = awsSignV4({
+        const delHeaders = await awsSignV4({
           method: "DELETE",
           host,
           path: delPath,
@@ -183,7 +200,7 @@ Deno.serve(async (req: Request) => {
           accessKey,
           secretKey,
           headers: {},
-          bodyHex: sha256Hex(""),
+          bodyHex: await sha256Hex(""),
         });
         await fetch(`https://${host}${delPath}`, {
           method: "DELETE",
@@ -214,7 +231,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const path = `/${bucketName}/${key.split("/").map(encodeURIComponent).join("/")}`;
-      const signedHeaders = awsSignV4({
+      const signedHeaders = await awsSignV4({
         method: "DELETE",
         host,
         path,
@@ -223,7 +240,7 @@ Deno.serve(async (req: Request) => {
         accessKey,
         secretKey,
         headers: {},
-        bodyHex: sha256Hex(""),
+        bodyHex: await sha256Hex(""),
       });
 
       const res = await fetch(`https://${host}${path}`, {
@@ -293,14 +310,14 @@ Deno.serve(async (req: Request) => {
         "AWS4-HMAC-SHA256",
         amzDate,
         credentialScope,
-        sha256Hex(canonicalRequest),
+        await sha256Hex(canonicalRequest),
       ].join("\n");
 
-      const kDate = hmac(`AWS4${secretKey}`, dateStamp);
-      const kRegion = hmac(kDate, region);
-      const kService = hmac(kRegion, "s3");
-      const kSigning = hmac(kService, "aws4_request");
-      const signature = hmac(kSigning, stringToSign).toString("hex");
+      const kDate = await hmac(`AWS4${secretKey}`, dateStamp);
+      const kRegion = await hmac(kDate, region);
+      const kService = await hmac(kRegion, "s3");
+      const kSigning = await hmac(kService, "aws4_request");
+      const signature = bytesToHex(await hmac(kSigning, stringToSign));
 
       queryParams.set("X-Amz-Signature", signature);
       const signedUrl = `https://${host}${path}?${queryParams.toString()}`;
