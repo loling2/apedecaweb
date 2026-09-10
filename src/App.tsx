@@ -505,6 +505,13 @@ function parseJson<T>(value: string | null, fallback: T): T {
   }
 }
 
+function formatDate(dateStr: string): string {
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
 function ProjectLinksBlock() {
   return (
     <>
@@ -528,6 +535,7 @@ function ProjectsSliderSection() {
   const [archived, setArchived] = useState<ApeProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [selectedArchivedYear, setSelectedArchivedYear] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([fetchProjects('active'), fetchProjects('archived')])
@@ -541,6 +549,10 @@ function ProjectsSliderSection() {
 
   if (loading) return <div className="py-16 text-center text-slate-400">Cargando proyectos…</div>;
 
+  const archivedYears = [...new Set(archived.map((project) => project.year).filter((year): year is number => year !== null && year >= 2020))].sort((a, b) => b - a);
+  const activeArchivedYear = selectedArchivedYear && archivedYears.includes(selectedArchivedYear) ? selectedArchivedYear : archivedYears[0] ?? null;
+  const visibleArchived = activeArchivedYear === null ? [] : archived.filter((project) => project.year === activeArchivedYear);
+
   return (
     <>
       {active.length > 0 && (
@@ -553,10 +565,20 @@ function ProjectsSliderSection() {
                   <div className="relative h-[420px] overflow-hidden sm:h-[500px]">
                     <img src={project.image_url} alt={project.title} className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
+                    {project.logo_url && (
+                      <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
+                        <img src={project.logo_url} alt="" className="h-16 w-auto object-contain drop-shadow-lg sm:h-20" style={{ filter: 'brightness(0) invert(1)' }} />
+                      </div>
+                    )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12">
                       {project.year && <span className="mb-3 inline-block rounded-full bg-lime-400 px-4 py-1 text-sm font-bold text-slate-950">{project.year}</span>}
                       <h3 className="text-2xl font-light text-white sm:text-4xl">{project.title}</h3>
                       {project.description && <p className="mt-3 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">{project.description}</p>}
+                      {project.start_date && project.end_date && (
+                        <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                          <Clock3 size={15} /> {formatDate(project.start_date)} - {formatDate(project.end_date)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -581,8 +603,26 @@ function ProjectsSliderSection() {
         <section className="bg-slate-50 px-5 py-16 sm:px-8">
           <div className="mx-auto max-w-7xl">
             <h2 className="mb-8 text-center text-3xl font-light text-slate-900 sm:text-4xl">Proyectos <span className="text-lime-600">finalizados</span></h2>
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              {archived.map((project) => (
+            {archivedYears.length > 0 && (
+              <div className="mb-10 flex flex-wrap justify-center gap-3" role="tablist" aria-label="Filtrar proyectos por año">
+                {archivedYears.map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => setSelectedArchivedYear(year)}
+                    className={`rounded-full px-6 py-3 text-base font-semibold transition ${activeArchivedYear === year ? 'bg-sky-600 text-white shadow-md' : 'border border-sky-200 bg-white text-sky-700 hover:border-sky-500 hover:bg-sky-50'}`}
+                    role="tab"
+                    aria-selected={activeArchivedYear === year}
+                  >
+                    {year}
+                  </button>
+                ))}
+              </div>
+            )}
+            {visibleArchived.length === 0 ? (
+              <p className="py-10 text-center text-slate-500">No hay proyectos finalizados para este año.</p>
+            ) : (
+              <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleArchived.map((project) => (
                 <article key={project.id} className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                   <div className="relative h-52 overflow-hidden">
                     <img src={project.image_url} alt={project.title} className="h-full w-full object-cover" />
@@ -593,10 +633,16 @@ function ProjectsSliderSection() {
                   <div className="p-6">
                     <h3 className="text-lg font-semibold text-slate-900">{project.title}</h3>
                     {project.description && <p className="mt-2 leading-7 text-slate-600">{project.description}</p>}
+                    {project.start_date && project.end_date && (
+                      <p className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-sky-700">
+                        <Clock3 size={15} /> {formatDate(project.start_date)} - {formatDate(project.end_date)}
+                      </p>
+                    )}
                   </div>
                 </article>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -1269,10 +1315,20 @@ function RecentProjectsPage() {
                   <div className="relative h-[480px] overflow-hidden sm:h-[560px]">
                     <img src={project.image_url} alt={project.title} className="h-full w-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
+                    {project.logo_url && (
+                      <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
+                        <img src={project.logo_url} alt="" className="h-16 w-auto object-contain drop-shadow-lg sm:h-20" style={{ filter: 'brightness(0) invert(1)' }} />
+                      </div>
+                    )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-14">
                       {project.year && <span className="mb-3 inline-block rounded-full bg-lime-400 px-4 py-1 text-sm font-bold text-slate-950">{project.year}</span>}
                       <h2 className="text-3xl font-light text-white sm:text-5xl">{project.title}</h2>
                       {project.description && <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-200">{project.description}</p>}
+                      {project.start_date && project.end_date && (
+                        <p className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                          <Clock3 size={15} /> {formatDate(project.start_date)} - {formatDate(project.end_date)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1302,6 +1358,7 @@ function ArchivedProjectsPage() {
   const [projects, setProjects] = useState<ApeProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
   useEffect(() => {
     fetchProjects('archived')
@@ -1322,9 +1379,32 @@ function ArchivedProjectsPage() {
         {loading && <p className="py-16 text-center text-slate-500">Cargando proyectos…</p>}
         {error && <p className="rounded-lg bg-amber-50 p-5 text-center text-amber-900">No se han podido cargar los proyectos ahora mismo.</p>}
         {!loading && !error && projects.length === 0 && <p className="py-16 text-center text-slate-500">No hay proyectos archivados todavía.</p>}
-        {!loading && !error && projects.length > 0 && (
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
+        {!loading && !error && projects.length > 0 && (() => {
+          const years = [...new Set(projects.map((project) => project.year).filter((year): year is number => year !== null && year >= 2020))].sort((a, b) => b - a);
+          const activeYear = selectedYear && years.includes(selectedYear) ? selectedYear : years[0] ?? null;
+          const visibleProjects = activeYear === null ? [] : projects.filter((project) => project.year === activeYear);
+          return (
+            <>
+              {years.length > 0 && (
+                <div className="mb-10 flex flex-wrap justify-center gap-3" role="tablist" aria-label="Filtrar proyectos por año">
+                  {years.map((year) => (
+                    <button
+                      key={year}
+                      onClick={() => setSelectedYear(year)}
+                      className={`rounded-full px-6 py-3 text-base font-semibold transition ${activeYear === year ? 'bg-sky-600 text-white shadow-md' : 'border border-sky-200 bg-white text-sky-700 hover:border-sky-500 hover:bg-sky-50'}`}
+                      role="tab"
+                      aria-selected={activeYear === year}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {visibleProjects.length === 0 ? (
+                <p className="py-10 text-center text-slate-500">No hay proyectos finalizados para este año.</p>
+              ) : (
+                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleProjects.map((project) => (
               <article key={project.id} className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
                 <div className="relative h-56 overflow-hidden">
                   <img src={project.image_url} alt={project.title} className="h-full w-full object-cover" />
@@ -1335,11 +1415,19 @@ function ArchivedProjectsPage() {
                 <div className="p-6">
                   <h2 className="text-xl font-semibold text-slate-900">{project.title}</h2>
                   {project.description && <p className="mt-3 leading-7 text-slate-600">{project.description}</p>}
+                  {project.start_date && project.end_date && (
+                    <p className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-700">
+                      <Clock3 size={15} /> {formatDate(project.start_date)} - {formatDate(project.end_date)}
+                    </p>
+                  )}
                 </div>
               </article>
-            ))}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
       </section>
     </main>
   );

@@ -646,7 +646,10 @@ function ProjectForm({ project, nextOrder, onClose, onSaved }: { project: ApePro
   const [title, setTitle] = useState(project?.title ?? '');
   const [description, setDescription] = useState(project?.description ?? '');
   const [imageUrl, setImageUrl] = useState(project?.image_url ?? '');
+  const [logoUrl, setLogoUrl] = useState(project?.logo_url ?? '');
   const [year, setYear] = useState(project?.year?.toString() ?? '');
+  const [startDate, setStartDate] = useState(project?.start_date ?? '');
+  const [endDate, setEndDate] = useState(project?.end_date ?? '');
   const [status, setStatus] = useState<'active' | 'archived'>(project?.status ?? 'active');
   const [isVisible, setIsVisible] = useState(project?.is_visible ?? true);
   const [saving, setSaving] = useState(false);
@@ -657,9 +660,9 @@ function ProjectForm({ project, nextOrder, onClose, onSaved }: { project: ApePro
     if (!imageUrl) { setError('Debes subir o pegar una imagen para el proyecto.'); return; }
     setSaving(true); setError('');
     try {
-      const input = { title, description: description || null, image_url: imageUrl, year: year ? parseInt(year, 10) : null, status, is_visible: isVisible, sort_order: project?.sort_order ?? nextOrder };
+      const input = { title, description: description || null, image_url: imageUrl, logo_url: logoUrl || null, year: year ? parseInt(year, 10) : null, start_date: startDate || null, end_date: endDate || null, status, is_visible: isVisible, sort_order: project?.sort_order ?? nextOrder };
       if (project) await updateProject(project.id, input);
-      else await createProject({ title, description: description || undefined, image_url: imageUrl, year: year ? parseInt(year, 10) : null, sort_order: nextOrder });
+      else await createProject({ title, description: description || undefined, image_url: imageUrl, logo_url: logoUrl || null, year: year ? parseInt(year, 10) : null, start_date: startDate || null, end_date: endDate || null, sort_order: nextOrder });
       await onSaved();
     } catch { setError('No se pudo guardar el proyecto.'); } finally { setSaving(false); }
   }
@@ -674,9 +677,18 @@ function ProjectForm({ project, nextOrder, onClose, onSaved }: { project: ApePro
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} min-h-28`} />
         </Field>
         <ImageInput label="Imagen del proyecto" value={imageUrl} onChange={setImageUrl} />
+        <ImageInput label="Logo del proyecto (esquina superior derecha)" value={logoUrl} onChange={setLogoUrl} />
         <Field label="Año (opcional)">
           <input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Ej: 2025" className={inputClass} />
         </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Fecha de inicio">
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
+          </Field>
+          <Field label="Fecha de finalización">
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputClass} />
+          </Field>
+        </div>
         <Field label="Estado">
           <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'archived')} className={inputClass}>
             <option value="active">Activo (aparece en el slider)</option>

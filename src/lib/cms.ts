@@ -146,7 +146,10 @@ export type ApeProject = {
   title: string;
   description: string | null;
   image_url: string;
+  logo_url: string | null;
   year: number | null;
+  start_date: string | null;
+  end_date: string | null;
   status: 'active' | 'archived';
   sort_order: number;
   is_visible: boolean;
@@ -160,13 +163,13 @@ export async function fetchProjects(status?: 'active' | 'archived'): Promise<Ape
   return data as ApeProject[];
 }
 
-export async function createProject(input: { title: string; description?: string; image_url: string; year?: number | null; sort_order?: number }): Promise<ApeProject> {
+export async function createProject(input: { title: string; description?: string; image_url: string; logo_url?: string | null; year?: number | null; start_date?: string | null; end_date?: string | null; sort_order?: number }): Promise<ApeProject> {
   const { data, error } = await supabase.from('ape_projects').insert(input).select().single();
   if (error) throw error;
   return data as ApeProject;
 }
 
-export async function updateProject(id: string, input: Partial<{ title: string; description: string | null; image_url: string; year: number | null; status: 'active' | 'archived'; sort_order: number; is_visible: boolean }>): Promise<ApeProject> {
+export async function updateProject(id: string, input: Partial<{ title: string; description: string | null; image_url: string; logo_url: string | null; year: number | null; start_date: string | null; end_date: string | null; status: 'active' | 'archived'; sort_order: number; is_visible: boolean }>): Promise<ApeProject> {
   const { data, error } = await supabase.from('ape_projects').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
   if (error) throw error;
   return data as ApeProject;
