@@ -32,6 +32,10 @@ import {
   createNavItem,
   updateNavItem,
   deleteNavItem,
+  fetchFooterLinks,
+  createFooterLink,
+  updateFooterLink,
+  deleteFooterLink,
   fetchSettings,
   updateSettings,
   uploadImage,
@@ -59,13 +63,14 @@ import {
   type CmsDocument,
   type CmsNavItem,
   type CmsSettings,
+  type CmsFooterLink,
   type ApeProject,
   type TransparencySection,
   type TransparencyItem,
   type TransparencyDoc,
 } from '@/lib/cms';
 
-type Tab = 'pages' | 'projects' | 'nav' | 'transparency' | 'settings';
+type Tab = 'pages' | 'projects' | 'nav' | 'transparency' | 'footer' | 'settings';
 
 type Props = {
   userEmail: string;
@@ -87,6 +92,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
           <SidebarLink active={tab === 'projects'} onClick={() => setTab('projects')} icon={FolderCog} label="Proyectos" />
           <SidebarLink active={tab === 'transparency'} onClick={() => setTab('transparency')} icon={FileText} label="Transparencia" />
           <SidebarLink active={tab === 'nav'} onClick={() => setTab('nav')} icon={Link2} label="Menú de navegación" />
+          <SidebarLink active={tab === 'footer'} onClick={() => setTab('footer')} icon={Link2} label="Enlaces de interés" />
           <SidebarLink active={tab === 'settings'} onClick={() => setTab('settings')} icon={Settings} label="Ajustes del sitio" />
         </nav>
         <div className="border-t border-slate-700 pt-4">
@@ -100,9 +106,9 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
       <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-slate-900 px-4 py-3 text-white sm:hidden">
         <span className="text-sm font-semibold">CMS Apedeca</span>
         <div className="flex gap-2">
-          {(['pages', 'projects', 'transparency', 'nav', 'settings'] as Tab[]).map((t) => (
+          {(['pages', 'projects', 'transparency', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded px-3 py-1.5 text-xs ${tab === t ? 'bg-sky-500' : 'bg-slate-800'}`}>
-              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : 'Ajustes'}
+              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
             </button>
           ))}
           <button onClick={onClose} className="rounded bg-slate-800 p-1.5"><X size={16} /></button>
@@ -114,6 +120,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
         {tab === 'projects' && <ProjectsTab />}
         {tab === 'transparency' && <TransparencyTab />}
         {tab === 'nav' && <NavTab />}
+        {tab === 'footer' && <FooterTab />}
         {tab === 'settings' && <SettingsTab />}
       </div>
     </div>
@@ -1131,6 +1138,139 @@ function NavItemForm({ pages, onClose, onSaved }: { pages: CmsPage[]; onClose: (
   );
 }
 
+/* ==================== FOOTER LINKS TAB ==================== */
+
+function FooterTab() {
+  const [links, setLinks] = useState<CmsFooterLink[]>([]);
+  const [pages, setPages] = useState<CmsPage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingLink, setEditingLink] = useState<CmsFooterLink | null>(null);
+
+  useEffect(() => {
+    Promise.all([fetchFooterLinks(), fetchPages()])
+      .then(([fl, pgs]) => { setLinks(fl); setPages(pgs); })
+      .catch(() => setError('No se pudieron cargar los enlaces.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  async function moveLink(link: CmsFooterLink, dir: -1 | 1) {
+    const sorted = [...links].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex((l) => l.id === link.id);
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    await updateFooterLink(link.id, { sort_order: other.sort_order });
+    await updateFooterLink(other.id, { sort_order: link.sort_order });
+    setLinks(await fetchFooterLinks());
+  }
+
+  async function toggleVisible(link: CmsFooterLink) {
+    await updateFooterLink(link.id, { is_visible: !link.is_visible });
+    setLinks(await fetchFooterLinks());
+  }
+
+  if (loading) return <div className="p-10 text-slate-500">Cargando enlaces…</div>;
+
+  return (
+    <div className="mx-auto max-w-3xl p-6 sm:p-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-light text-slate-900">Enlaces de interés</h1>
+          <p className="mt-2 text-slate-500">Gestiona los enlaces que aparecen en el pie de página. Cada enlace puede apuntar a una página interna o a una URL externa.</p>
+        </div>
+        <button onClick={() => { setEditingLink(null); setShowForm(true); }} className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+          <Plus size={18} /> Nuevo enlace
+        </button>
+      </div>
+
+      {error && <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      <div className="mt-8 space-y-2">
+        {links.length === 0 && <p className="py-10 text-center text-slate-400">No hay enlaces todavía. Crea el primero con "Nuevo enlace".</p>}
+        {links.map((link, idx) => (
+          <div key={link.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-0.5">
+              <button onClick={() => moveLink(link, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronUp size={16} /></button>
+              <button onClick={() => moveLink(link, 1)} disabled={idx === links.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronDown size={16} /></button>
+            </div>
+            <GripVertical size={18} className="text-slate-300" />
+            <div className="min-w-0 flex-1">
+              <span className={`font-semibold ${link.is_visible ? 'text-slate-900' : 'text-slate-400 line-through'}`}>{link.label}</span>
+              <p className="text-sm text-slate-500">{link.page_slug ? `→ /${link.page_slug}` : link.external_url ?? 'Sin destino'}</p>
+            </div>
+            <button onClick={() => toggleVisible(link)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${link.is_visible ? 'bg-lime-100 text-lime-800' : 'bg-slate-100 text-slate-500'}`}>
+              {link.is_visible ? 'Visible' : 'Oculto'}
+            </button>
+            <button onClick={() => { setEditingLink(link); setShowForm(true); }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
+              Editar
+            </button>
+            <button onClick={async () => { if (confirm('¿Eliminar este enlace?')) { await deleteFooterLink(link.id); setLinks(await fetchFooterLinks()); } }} className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:border-red-400 hover:text-red-600">
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {showForm && (
+        <FooterLinkForm
+          link={editingLink}
+          pages={pages}
+          nextOrder={links.length}
+          onClose={() => setShowForm(false)}
+          onSaved={async () => { setShowForm(false); setLinks(await fetchFooterLinks()); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function FooterLinkForm({ link, pages, nextOrder, onClose, onSaved }: { link: CmsFooterLink | null; pages: CmsPage[]; nextOrder: number; onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState(link?.label ?? '');
+  const [pageSlug, setPageSlug] = useState(link?.page_slug ?? '');
+  const [externalUrl, setExternalUrl] = useState(link?.external_url ?? '');
+  const [isVisible, setIsVisible] = useState(link?.is_visible ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError('');
+    const input = { label, page_slug: pageSlug || null, external_url: externalUrl || null, sort_order: link?.sort_order ?? nextOrder, is_visible: isVisible };
+    try {
+      if (link) await updateFooterLink(link.id, input);
+      else await createFooterLink(input);
+      await onSaved();
+    } catch { setError('No se pudo guardar el enlace.'); } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title={link ? 'Editar enlace' : 'Nuevo enlace'} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label="Texto del enlace">
+          <input required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ej: Política de privacidad" className={inputClass} />
+        </Field>
+        <Field label="Página destino (interna)">
+          <select value={pageSlug} onChange={(e) => setPageSlug(e.target.value)} className={inputClass}>
+            <option value="">— Ninguna —</option>
+            {pages.map((p) => <option key={p.id} value={p.slug}>{p.title} (/{p.slug})</option>)}
+          </select>
+        </Field>
+        <Field label="O URL externa (si no es una página interna)">
+          <input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" className={inputClass} />
+        </Field>
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} className="h-5 w-5 rounded border-slate-300" />
+          <span className="text-sm font-semibold">Visible en la web</span>
+        </label>
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <SaveButton saving={saving} label="Guardar enlace" />
+      </form>
+    </Modal>
+  );
+}
+
 /* ==================== SETTINGS TAB ==================== */
 
 function SettingsTab() {
@@ -1263,7 +1403,18 @@ function ImageInput({ label, value, onChange }: { label: string; value: string; 
   return (
     <div>
       <span className="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
-      {value && <img src={value} alt="" className="mb-3 h-28 w-full rounded-lg object-cover" />}
+      {value && (
+        <div className="relative mb-3">
+          <img src={value} alt="" className="h-28 w-full rounded-lg object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute right-2 top-2 flex items-center gap-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white shadow transition hover:bg-red-600"
+          >
+            <Trash2 size={14} /> Eliminar imagen
+          </button>
+        </div>
+      )}
       <div className="space-y-2">
         <input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Pega una URL o sube una imagen" className={inputClass} />
         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-sky-300 bg-sky-50 px-4 py-3 text-sm text-sky-800 hover:bg-sky-100">

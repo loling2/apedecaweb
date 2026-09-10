@@ -47,6 +47,7 @@ import {
   fetchBlocks,
   fetchNavItems,
   fetchSettings,
+  fetchFooterLinks,
   fetchDocuments,
   fetchProjects,
   fetchTransparencySections,
@@ -59,6 +60,7 @@ import {
   type CmsDocument,
   type CmsNavItem,
   type CmsSettings,
+  type CmsFooterLink,
   type ApeProject,
   type TransparencySection,
   type TransparencyItem,
@@ -99,6 +101,7 @@ function App() {
   const [navItems, setNavItems] = useState<CmsNavItem[]>([]);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [settings, setSettings] = useState<CmsSettings | null>(null);
+  const [footerLinks, setFooterLinks] = useState<CmsFooterLink[]>([]);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('sign-in');
@@ -123,12 +126,14 @@ function App() {
       return;
     }
     try {
-      const [nav, stt] = await Promise.all([
+      const [nav, stt, fl] = await Promise.all([
         fetchNavItems().catch(() => fallbackNavItems),
         fetchSettings().catch(() => fallbackSettings),
+        fetchFooterLinks().catch(() => []),
       ]);
       setNavItems(nav);
       setSettings(stt);
+      setFooterLinks(fl);
     } catch {
       setNavItems(fallbackNavItems);
       setSettings(fallbackSettings);
@@ -174,7 +179,7 @@ function App() {
       ) : (
         <DynamicPage slug={slug} />
       )}
-      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} onNavigate={navigate} />}
+      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} footerLinks={footerLinks} onNavigate={navigate} />}
       {currentPath !== '/admin' && <AccessibilityWidget open={accessibilityOpen} setOpen={setAccessibilityOpen} />}
       {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
       {loadingContent && <div className="fixed bottom-5 left-5 rounded-full bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">Conectando contenido…</div>}
@@ -1569,15 +1574,9 @@ function ApplicationModal({ offer, onClose }: { offer: ApeJobOffer; onClose: () 
 
 /* ==================== FOOTER ==================== */
 
-function Footer({ navItems, settings, onNavigate }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onNavigate: (href: string) => void }) {
+function Footer({ navItems, settings, footerLinks, onNavigate }: { navItems: CmsNavItem[]; settings: CmsSettings | null; footerLinks: CmsFooterLink[]; onNavigate: (href: string) => void }) {
   const visibleItems = navItems.filter((i) => i.is_visible).sort((a, b) => a.sort_order - b.sort_order);
-  const legalLinks = [
-    { label: 'Aviso legal', href: '/aviso-legal' },
-    { label: 'Política de privacidad', href: '/politica-privacidad' },
-    { label: 'Política de cookies', href: '/politica-cookies' },
-    { label: 'Estatutos de la asociación', href: '/estatutos' },
-    { label: 'Memoria de actividades', href: '/memoria-actividades' },
-  ];
+  const visibleFooterLinks = footerLinks.filter((l) => l.is_visible).sort((a, b) => a.sort_order - b.sort_order);
   const socialLinks = [
     { url: settings?.facebook_url, Icon: Facebook },
     { url: settings?.instagram_url, Icon: Instagram },
@@ -1606,7 +1605,7 @@ function Footer({ navItems, settings, onNavigate }: { navItems: CmsNavItem[]; se
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-lime-300">Enlaces de interés</h3>
             <ul className="space-y-2">
-              {legalLinks.map((link) => <li key={link.href}><button onClick={() => onNavigate(link.href)} className="text-sm text-sky-200 transition hover:text-white">{link.label}</button></li>)}
+              {visibleFooterLinks.map((link) => <li key={link.id}><button onClick={() => onNavigate(link.external_url ?? (link.page_slug ? `/${link.page_slug}` : '#'))} className="text-sm text-sky-200 transition hover:text-white">{link.label}</button></li>)}
             </ul>
           </div>
           <div>

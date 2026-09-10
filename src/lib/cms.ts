@@ -60,6 +60,17 @@ export type BlockInput = Omit<CmsBlock, 'id' | 'created_at' | 'updated_at'> & { 
 export type PageInput = Omit<CmsPage, 'id'> & { id?: string };
 export type NavItemInput = Omit<CmsNavItem, 'id'> & { id?: string };
 
+export type CmsFooterLink = {
+  id: string;
+  label: string;
+  page_slug: string | null;
+  external_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+};
+
+export type FooterLinkInput = Omit<CmsFooterLink, 'id'> & { id?: string };
+
 // ===== PAGES =====
 
 export async function fetchPages(): Promise<CmsPage[]> {
@@ -419,4 +430,29 @@ export async function deleteTransparencyDoc(id: string): Promise<void> {
 
 export function getTransparencyDocUrl(filePath: string): string {
   return `${functionUrl}?action=download&key=${encodeURIComponent(filePath)}`;
+}
+
+// ===== FOOTER LINKS =====
+
+export async function fetchFooterLinks(): Promise<CmsFooterLink[]> {
+  const { data, error } = await supabase.from('ape_cms_footer_links').select('*').order('sort_order');
+  if (error) throw error;
+  return data as CmsFooterLink[];
+}
+
+export async function createFooterLink(input: FooterLinkInput): Promise<CmsFooterLink> {
+  const { data, error } = await supabase.from('ape_cms_footer_links').insert(input).select().single();
+  if (error) throw error;
+  return data as CmsFooterLink;
+}
+
+export async function updateFooterLink(id: string, input: Partial<FooterLinkInput>): Promise<CmsFooterLink> {
+  const { data, error } = await supabase.from('ape_cms_footer_links').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) throw error;
+  return data as CmsFooterLink;
+}
+
+export async function deleteFooterLink(id: string): Promise<void> {
+  const { error } = await supabase.from('ape_cms_footer_links').delete().eq('id', id);
+  if (error) throw error;
 }
