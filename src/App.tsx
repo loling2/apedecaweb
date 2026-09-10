@@ -43,7 +43,6 @@ import { supabase } from '@/lib/supabase';
 
 import { loadApeJobOffers, submitApeJobApplication, type ApeJobOffer } from '@/lib/jobs';
 import {
-  fetchPages,
   fetchPageBySlug,
   fetchBlocks,
   fetchNavItems,
@@ -71,11 +70,35 @@ import { fallbackNavItems, fallbackSettings, fallbackPages, fallbackBlocks } fro
 
 type AuthMode = 'sign-in' | 'sign-up';
 
+function usePath() {
+  const [path, setPath] = useState(window.location.pathname);
+  useEffect(() => {
+    const onPop = () => setPath(window.location.pathname);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  return path;
+}
+
+function navigate(href: string) {
+  if (href.startsWith('#')) {
+    document.querySelector(href)?.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  if (href.startsWith('http') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+    window.open(href, '_blank', 'noreferrer');
+    return;
+  }
+  window.history.pushState({}, '', href);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+  window.scrollTo(0, 0);
+}
+
 function App() {
+  const currentPath = usePath();
   const [navItems, setNavItems] = useState<CmsNavItem[]>([]);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [settings, setSettings] = useState<CmsSettings | null>(null);
-  const currentPath = window.location.pathname;
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('sign-in');
@@ -117,7 +140,7 @@ function App() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    window.location.href = '/';
+    navigate('/');
   }
 
   // Determine which page to render
@@ -129,12 +152,13 @@ function App() {
       <TopBar
         navItems={navItems}
         settings={settings}
-        onEditor={() => sessionEmail ? (window.location.href = '/admin') : setAuthOpen(true)}
+        onNavigate={navigate}
+        onEditor={() => sessionEmail ? navigate('/admin') : setAuthOpen(true)}
         sessionEmail={sessionEmail}
         onSignOut={handleSignOut}
       />
       {currentPath === '/admin' ? (
-        sessionEmail ? <CmsPanel userEmail={sessionEmail} onClose={() => { window.location.href = '/'; }} /> : <AdminLogin onClose={() => { window.location.href = '/'; }} />
+        sessionEmail ? <CmsPanel userEmail={sessionEmail} onClose={() => navigate('/')} /> : <AdminLogin onClose={() => navigate('/')} />
       ) : currentPath === '/trabaja-con-nosotros' ? (
         <JobsPage />
       ) : currentPath === '/proyectos-recientes' ? (
@@ -150,7 +174,7 @@ function App() {
       ) : (
         <DynamicPage slug={slug} />
       )}
-      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} />}
+      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} onNavigate={navigate} />}
       {currentPath !== '/admin' && <AccessibilityWidget open={accessibilityOpen} setOpen={setAccessibilityOpen} />}
       {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
       {loadingContent && <div className="fixed bottom-5 left-5 rounded-full bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">Conectando contenido…</div>}
@@ -228,7 +252,7 @@ function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value
 
 /* ==================== TOP BAR ==================== */
 
-function TopBar({ navItems, settings, onEditor, sessionEmail, onSignOut }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onEditor: () => void; sessionEmail: string | null; onSignOut: () => void }) {
+function TopBar({ navItems, settings, onNavigate, onEditor, sessionEmail, onSignOut }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onNavigate: (href: string) => void; onEditor: () => void; sessionEmail: string | null; onSignOut: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const visibleItems = navItems.filter((i) => i.is_visible).sort((a, b) => a.sort_order - b.sort_order);
 
@@ -242,7 +266,7 @@ function TopBar({ navItems, settings, onEditor, sessionEmail, onSignOut }: { nav
             {settings?.linkedin_url && <a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={18} fill="currentColor" /></a>}
             {settings?.youtube_url && <a href={settings.youtube_url} target="_blank" rel="noreferrer"><Youtube size={19} fill="currentColor" /></a>}
           </div>
-          <a href="/" className="group flex items-center gap-2" aria-label="Apedeca inicio">
+          <button onClick={() => onNavigate('/')} className="group flex items-center gap-2" aria-label="Apedeca inicio">
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt={settings.site_name} className="h-14 w-auto" />
             ) : (
@@ -252,9 +276,9 @@ function TopBar({ navItems, settings, onEditor, sessionEmail, onSignOut }: { nav
                 <span className="relative z-10 text-lg font-black italic tracking-tighter text-sky-700">{settings?.site_name ?? 'Apedeca'}</span>
               </span>
             )}
-          </a>
+          </button>
           <div className="flex flex-col items-end leading-tight">
-            <a href="/canal-de-denuncias" className="text-[11px] font-semibold text-sky-600 transition hover:text-sky-800 sm:text-sm">Canal de Denuncias</a>
+            <button onClick={() => onNavigate('/canal-de-denuncias')} className="text-[11px] font-semibold text-sky-600 transition hover:text-sky-800 sm:text-sm">Canal de Denuncias</button>
             <a href="tel:922075545" className="mt-1 flex items-center gap-1 text-[11px] text-sky-500 transition hover:text-sky-700 sm:text-sm"><Phone size={13} /> 922.075.545</a>
           </div>
           <button onClick={() => setMenuOpen(!menuOpen)} className="rounded p-2 text-slate-700 md:hidden" aria-label="Abrir menú">{menuOpen ? <X /> : <Menu />}</button>
@@ -264,10 +288,10 @@ function TopBar({ navItems, settings, onEditor, sessionEmail, onSignOut }: { nav
         <div className="mx-auto flex max-w-7xl flex-col items-stretch justify-center px-5 md:flex-row md:items-center md:gap-6 lg:px-10">
           {visibleItems.map((item) => {
             const href = item.external_url ?? (item.page_slug === 'inicio' ? '/' : `/${item.page_slug}`);
-            return <a key={item.id} href={href} className="py-3 text-center text-base transition hover:text-sky-600 md:py-5 text-slate-600">{item.label}</a>;
+            return <button key={item.id} onClick={() => onNavigate(href)} className="py-3 text-center text-base transition hover:text-sky-600 md:py-5 text-slate-600">{item.label}</button>;
           })}
-          <a href="/trabaja-con-nosotros" className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</a>
-          <a href="#contacto" className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</a>
+          <button onClick={() => onNavigate('/trabaja-con-nosotros')} className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</button>
+          <button onClick={() => onNavigate('#contacto')} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
           <button onClick={onEditor} className="my-2 flex items-center justify-center gap-2 rounded border border-slate-200 px-4 py-3 text-sm text-slate-700 transition hover:border-sky-400 hover:text-sky-600 md:my-0"><LockKeyhole size={15} /> {sessionEmail ? 'Editar web' : 'Acceso admin'}</button>
           {sessionEmail && <button onClick={onSignOut} className="py-3 text-xs text-slate-500 hover:text-red-600 md:py-0">Salir</button>}
         </div>
@@ -299,8 +323,7 @@ function DynamicPage({ slug }: { slug: string }) {
         return;
       }
       try {
-        const allPages = await fetchPages();
-        const found = allPages.find((p) => p.slug === slug);
+        const found = await fetchPageBySlug(slug);
         if (!found || !found.is_visible) { if (active) setNotFound(true); return; }
         const blks = await fetchBlocks(found.id);
         if (!active) return;
@@ -357,7 +380,7 @@ function BlockRenderer({ block }: { block: CmsBlock }) {
     case 'accordion':
       return <AccordionBlock block={block} />;
     case 'project-links':
-      return <ProjectLinksBlock />;
+      return <ProjectLinksBlock onNavigate={navigate} />;
     case 'volunteer-benefits':
       return <VolunteerBenefitsBlock block={block} />;
     case 'volunteer-process':
@@ -512,18 +535,18 @@ function formatDate(dateStr: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function ProjectLinksBlock() {
+function ProjectLinksBlock({ onNavigate }: { onNavigate: (href: string) => void }) {
   return (
     <>
       <section className="mx-auto grid max-w-6xl gap-16 px-6 py-28 sm:grid-cols-2 lg:gap-32 lg:px-10">
-        <a href="/proyectos-recientes" className="group flex flex-col items-center text-center transition hover:-translate-y-2">
+        <button onClick={() => onNavigate('/proyectos-recientes')} className="group flex flex-col items-center text-center transition hover:-translate-y-2">
           <ClipboardCheck size={122} strokeWidth={1.5} className="text-sky-600 transition group-hover:scale-105" />
           <h2 className="mt-7 text-4xl font-light text-sky-600 sm:text-5xl">Proyectos <span className="font-semibold text-sky-500">Recientes</span></h2>
-        </a>
-        <a href="/historial-de-proyectos" className="group flex flex-col items-center text-center transition hover:-translate-y-2">
+        </button>
+        <button onClick={() => onNavigate('/historial-de-proyectos')} className="group flex flex-col items-center text-center transition hover:-translate-y-2">
           <FolderCog size={122} strokeWidth={1.5} className="text-lime-500 transition group-hover:scale-105" />
           <h2 className="mt-7 text-4xl font-light text-sky-600 sm:text-5xl">Historial de <span className="font-semibold text-lime-500">proyectos</span></h2>
-        </a>
+        </button>
       </section>
       <ProjectsSliderSection />
     </>
@@ -860,7 +883,7 @@ function NotFoundPage() {
     <main className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
       <h1 className="text-6xl font-light text-slate-300">404</h1>
       <p className="mt-4 text-xl text-slate-500">La página que buscas no existe o no está visible.</p>
-      <a href="/" className="mt-8 rounded-lg bg-sky-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Volver al inicio</a>
+      <a href="/" className="mt-8 rounded-lg bg-sky-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-sky-400" onClick={(e) => { e.preventDefault(); window.history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo(0, 0); }}>Volver al inicio</a>
     </main>
   );
 }
@@ -1000,6 +1023,7 @@ function TransparencyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedLabel, setSelectedLabel] = useState('');
+  const [loadedSections, setLoadedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -1010,29 +1034,6 @@ function TransparencyPage() {
         if (!active) return;
         setSections(visible);
         if (visible.length > 0) setSelectedLabel(visible[0].label);
-
-        const itemResults = await Promise.all(
-          visible.map((sec) => fetchTransparencyItems(sec.id)),
-        );
-        const itemsMap: Record<string, TransparencyItem[]> = {};
-        const allItems: { sectionId: string; item: TransparencyItem }[] = [];
-        visible.forEach((sec, i) => {
-          const items = itemResults[i].sort((a, b) => a.sort_order - b.sort_order);
-          itemsMap[sec.id] = items;
-          items.forEach((item) => allItems.push({ sectionId: sec.id, item }));
-        });
-
-        const docResults = await Promise.all(
-          allItems.map(({ item }) => fetchTransparencyDocs(item.id)),
-        );
-        const docsMap: Record<string, TransparencyDoc[]> = {};
-        allItems.forEach(({ item }, i) => {
-          docsMap[item.id] = docResults[i].sort((a, b) => a.sort_order - b.sort_order);
-        });
-
-        if (!active) return;
-        setItemsBySection(itemsMap);
-        setDocsByItem(docsMap);
       } catch {
         if (active) setError('No se pudo cargar el contenido de transparencia.');
       } finally {
@@ -1042,9 +1043,34 @@ function TransparencyPage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!selectedLabel) return;
+    const section = sections.find((s) => s.label === selectedLabel);
+    if (!section || loadedSections.has(section.id)) return;
+    setLoadedSections((prev) => new Set(prev).add(section.id));
+
+    let active = true;
+    (async () => {
+      try {
+        const items = (await fetchTransparencyItems(section.id)).sort((a, b) => a.sort_order - b.sort_order);
+        if (!active) return;
+        setItemsBySection((prev) => ({ ...prev, [section.id]: items }));
+
+        const docResults = await Promise.all(items.map((item) => fetchTransparencyDocs(item.id)));
+        if (!active) return;
+        const docsMap: Record<string, TransparencyDoc[]> = {};
+        items.forEach((item, i) => {
+          docsMap[item.id] = docResults[i].sort((a, b) => a.sort_order - b.sort_order);
+        });
+        setDocsByItem((prev) => ({ ...prev, ...docsMap }));
+      } catch {
+      }
+    })();
+    return () => { active = false; };
+  }, [selectedLabel, sections, loadedSections]);
+
   function selectSection(label: string) {
     setSelectedLabel(label);
-    document.getElementById(`transparency-${label}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-slate-400">Cargando transparencia…</div>;
@@ -1528,7 +1554,7 @@ function ApplicationModal({ offer, onClose }: { offer: ApeJobOffer; onClose: () 
 
 /* ==================== FOOTER ==================== */
 
-function Footer({ navItems, settings }: { navItems: CmsNavItem[]; settings: CmsSettings | null }) {
+function Footer({ navItems, settings, onNavigate }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onNavigate: (href: string) => void }) {
   const visibleItems = navItems.filter((i) => i.is_visible).sort((a, b) => a.sort_order - b.sort_order);
   const legalLinks = [
     { label: 'Aviso legal', href: '/aviso-legal' },
@@ -1558,14 +1584,14 @@ function Footer({ navItems, settings }: { navItems: CmsNavItem[]; settings: CmsS
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-lime-300">Explorar</h3>
             <ul className="space-y-2">
-              {visibleItems.map((item) => <li key={item.id}><a href={item.external_url ?? (item.page_slug === 'inicio' ? '/' : `/${item.page_slug}`)} className="text-sm text-sky-200 transition hover:text-white">{item.label}</a></li>)}
-              <li><a href="/trabaja-con-nosotros" className="text-sm text-sky-200 transition hover:text-white">Trabaja con nosotros</a></li>
+              {visibleItems.map((item) => <li key={item.id}><button onClick={() => onNavigate(item.external_url ?? (item.page_slug === 'inicio' ? '/' : `/${item.page_slug}`))} className="text-sm text-sky-200 transition hover:text-white">{item.label}</button></li>)}
+              <li><button onClick={() => onNavigate('/trabaja-con-nosotros')} className="text-sm text-sky-200 transition hover:text-white">Trabaja con nosotros</button></li>
             </ul>
           </div>
           <div>
             <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-lime-300">Enlaces de interés</h3>
             <ul className="space-y-2">
-              {legalLinks.map((link) => <li key={link.href}><a href={link.href} className="text-sm text-sky-200 transition hover:text-white">{link.label}</a></li>)}
+              {legalLinks.map((link) => <li key={link.href}><button onClick={() => onNavigate(link.href)} className="text-sm text-sky-200 transition hover:text-white">{link.label}</button></li>)}
             </ul>
           </div>
           <div>
@@ -1582,10 +1608,10 @@ function Footer({ navItems, settings }: { navItems: CmsNavItem[]; settings: CmsS
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-5 text-xs text-sky-300 sm:flex-row lg:px-10">
           <p>Copyright © {year} {settings?.site_name ?? 'Apedeca'} · Todos los derechos reservados</p>
           <div className="flex gap-4">
-            <a href="/aviso-legal" className="transition hover:text-white">Aviso legal</a>
-            <a href="/politica-privacidad" className="transition hover:text-white">Privacidad</a>
-            <a href="/politica-cookies" className="transition hover:text-white">Cookies</a>
-            <a href="/accesibilidad" className="transition hover:text-white">Accesibilidad</a>
+            <button onClick={() => onNavigate('/aviso-legal')} className="transition hover:text-white">Aviso legal</button>
+            <button onClick={() => onNavigate('/politica-privacidad')} className="transition hover:text-white">Privacidad</button>
+            <button onClick={() => onNavigate('/politica-cookies')} className="transition hover:text-white">Cookies</button>
+            <button onClick={() => onNavigate('/accesibilidad')} className="transition hover:text-white">Accesibilidad</button>
           </div>
         </div>
       </div>
