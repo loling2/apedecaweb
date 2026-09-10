@@ -7,10 +7,10 @@ const corsHeaders = {
 };
 
 function getClient(): { client: S3Client; bucket: string } {
-  const accessKey = Deno.env.get("WASABI_ACCESS_KEY")?.trim();
-  const secretKey = Deno.env.get("WASABI_SECRET_KEY")?.trim();
-  const bucketName = Deno.env.get("WASABI_BUCKET_NAME")?.trim();
-  const endpoint = Deno.env.get("WASABI_ENDPOINT")?.trim();
+  const accessKey = (Deno.env.get("WASABI_ACCESS_KEY") || Deno.env.get("VITE_WASABI_ACCESS_KEY"))?.trim();
+  const secretKey = (Deno.env.get("WASABI_SECRET_KEY") || Deno.env.get("VITE_WASABI_SECRET_KEY"))?.trim();
+  const bucketName = (Deno.env.get("WASABI_BUCKET_NAME") || Deno.env.get("VITE_WASABI_BUCKET_NAME"))?.trim();
+  const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
 
   if (!accessKey || !secretKey || !bucketName || !endpoint) {
     throw new Error("Faltan secretos de Wasabi");
@@ -46,8 +46,8 @@ Deno.serve(async (req: Request) => {
     const action = url.searchParams.get("action") || "upload";
 
     if (action === "health") {
-      const endpoint = Deno.env.get("WASABI_ENDPOINT")?.trim();
-      const region = Deno.env.get("WASABI_REGION")?.trim()
+      const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
+      const region = (Deno.env.get("WASABI_REGION") || Deno.env.get("VITE_WASABI_REGION"))?.trim()
         || (endpoint ? new URL(endpoint).hostname.match(/s3\.([a-z0-9-]+)\.wasabisys\.com/i)?.[1] : "")
         || "eu-central-1";
       return new Response(
@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const endpoint = Deno.env.get("WASABI_ENDPOINT")?.trim();
+      const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
       const publicUrl = `${endpoint?.replace(/\/$/, "")}/${bucket}/${key}`;
       return new Response(
         JSON.stringify({ path: key, url: publicUrl }),
