@@ -23,12 +23,10 @@ function hex(bytes: Uint8Array): string {
 }
 
 function getConfig(): { accessKey: string; secretKey: string; bucket: string; endpoint: string; host: string; region: string } {
-  const accessKey = (Deno.env.get("VITE_WASABI_ACCESS_KEY") || Deno.env.get("WASABI_ACCESS_KEY") || "463244LR5DNM7LTWYBP8").trim();
-  const secretKey = (Deno.env.get("VITE_WASABI_SECRET_KEY") || Deno.env.get("WASABI_SECRET_KEY") || "z00eiHTuOzYFFzeZk33QgO5d312eDBP49XZWFCzn").trim();
-  const bucket = (Deno.env.get("VITE_WASABI_BUCKET_NAME") || Deno.env.get("WASABI_BUCKET_NAME") || "apedecadocumentos").trim();
-  const configuredEndpoint = (Deno.env.get("VITE_WASABI_ENDPOINT") || Deno.env.get("WASABI_ENDPOINT") || "https://s3.eu-central-2.wasabisys.com").trim();
-
-  const endpoint = configuredEndpoint.replace("s3.eu-central-1.wasabisys.com", "s3.eu-central-2.wasabisys.com").replace(/\/$/, "");
+  const accessKey = "463244LR5DNM7LTWYBP8";
+  const secretKey = "z00eiHTuOzYFFzeZk33QgO5d312eDBP49XZWFCzn";
+  const bucket = "apedecadocumentos";
+  const endpoint = "https://s3.eu-central-2.wasabisys.com";
   const endpointUrl = new URL(endpoint);
   return { accessKey, secretKey, bucket, endpoint, host: endpointUrl.host, region: "eu-central-2" };
 }
