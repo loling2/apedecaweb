@@ -3,7 +3,6 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
-  HeadBucketCommand,
 } from "npm:@aws-sdk/client-s3@3.645.0";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.645.0";
 
@@ -23,6 +22,8 @@ Deno.serve(async (req: Request) => {
     const secretKey = Deno.env.get("WASABI_SECRET_KEY");
     const bucketName = Deno.env.get("WASABI_BUCKET_NAME");
     const endpoint = Deno.env.get("WASABI_ENDPOINT");
+    const endpointRegion = endpoint?.match(/s3\.([a-z0-9-]+)\.wasabisys\.com/i)?.[1];
+    const region = Deno.env.get("WASABI_REGION") || endpointRegion || "eu-central-1";
 
     if (!accessKey || !secretKey || !bucketName || !endpoint) {
       return new Response(
@@ -44,13 +45,13 @@ Deno.serve(async (req: Request) => {
 
     if (action === "health") {
       return new Response(
-        JSON.stringify({ configured: true, bucket: bucketName, endpoint }),
+        JSON.stringify({ configured: true, bucket: bucketName, endpoint, region }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const s3 = new S3Client({
-      region: "eu-central-1",
+      region,
       endpoint,
       credentials: {
         accessKeyId: accessKey,
@@ -59,22 +60,11 @@ Deno.serve(async (req: Request) => {
       forcePathStyle: true,
     });
 
-    // ── TEST (HEAD bucket + small upload + delete) ──────
+    // ── TEST (small upload + delete) ─────────────────────
     if (req.method === "POST" && action === "test") {
       const testKey = `2026/test/test-${Date.now()}.txt`;
 
-      // 1. Check bucket exists / reachable
-      try {
-        await s3.send(new HeadBucketCommand({ Bucket: bucketName }));
-      } catch (headErr) {
-        const msg = headErr instanceof Error ? headErr.message : String(headErr);
-        return new Response(
-          JSON.stringify({ error: `No se puede acceder al bucket "${bucketName}" en ${endpoint}: ${msg}` }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      // 2. Upload a tiny file
+      // Upload a tiny file using the same permission as real uploads.
       try {
         await s3.send(
           new PutObjectCommand({
@@ -87,12 +77,12 @@ Deno.serve(async (req: Request) => {
       } catch (putErr) {
         const msg = putErr instanceof Error ? putErr.message : String(putErr);
         return new Response(
-          JSON.stringify({ error: `Bucket accesible pero no se pudo subir: ${msg}` }),
+          JSON.stringify({ error: `No se pudo subir al bucket \"${bucketName}\" en la región ${region}: ${msg}` }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // 3. Clean up
+      // Clean up
       try {
         await s3.send(new DeleteObjectCommand({ Bucket: bucketName, Key: testKey }));
       } catch (_delErr) {
