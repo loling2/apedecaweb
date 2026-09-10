@@ -535,6 +535,21 @@ function formatDate(dateStr: string): string {
   return `${day}/${month}/${year}`;
 }
 
+function isSvgLogo(url: string): boolean {
+  return url.toLowerCase().endsWith('.svg');
+}
+
+function ProjectLogo({ url, className }: { url: string; className?: string }) {
+  if (isSvgLogo(url)) {
+    return <img src={url} alt="" className={`${className ?? ''} drop-shadow-lg`} />;
+  }
+  return (
+    <div className="rounded-lg bg-white/95 p-2 shadow-lg backdrop-blur-sm">
+      <img src={url} alt="" className={`${className ?? ''} object-contain`} />
+    </div>
+  );
+}
+
 function ProjectLinksBlock({ onNavigate }: { onNavigate: (href: string) => void }) {
   return (
     <>
@@ -590,7 +605,7 @@ function ProjectsSliderSection() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <img src={project.logo_url} alt="" className="h-16 w-auto object-contain drop-shadow-lg sm:h-20" style={{ filter: 'brightness(0) invert(1)' }} />
+                        <ProjectLogo url={project.logo_url} className="h-16 w-auto sm:h-20" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12">
@@ -1343,7 +1358,7 @@ function RecentProjectsPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <img src={project.logo_url} alt="" className="h-16 w-auto object-contain drop-shadow-lg sm:h-20" style={{ filter: 'brightness(0) invert(1)' }} />
+                        <ProjectLogo url={project.logo_url} className="h-16 w-auto sm:h-20" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-14">
