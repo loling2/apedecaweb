@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; color: #0f172a; background: #fff; font-synthesis: none; }
+html { scroll-behavior: smooth; }
+body { margin: 0; min-width: 320px; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+/* ===== Accessibility tools ===== */
+:root { font-size: 16px; }
+.a11y-text-large { font-size: 20px !important; }
+.a11y-text-small { font-size: 14px !important; }
+.a11y-grayscale { filter: grayscale(1) !important; }
+.a11y-high-contrast { filter: contrast(1.6) !important; }
+.a11y-negative-contrast { filter: invert(1) hue-rotate(180deg) !important; }
+.a11y-negative-contrast img, .a11y-negative-contrast video { filter: invert(1) hue-rotate(180deg) !important; }
+.a11y-light-background { background: #fff !important; color: #000 !important; }
+.a11y-light-background *:not(img):not(video) { background-color: #fff !important; color: #000 !important; }
+.a11y-underline-links a { text-decoration: underline !important; }
+.a11y-readable-font { font-family: 'Courier New', Courier, monospace !important; }

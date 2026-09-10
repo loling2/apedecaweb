@@ -1,0 +1,3 @@
+[functions.wasabi-storage]
+verify_jwt = true
+entrypoint = "./functions/wasabi-storage/index.ts"
