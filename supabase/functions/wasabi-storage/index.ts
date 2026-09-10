@@ -1,139 +1,133 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "npm:@aws-sdk/client-s3@3.637.0";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-function getClient(): { client: S3Client; bucket: string } {
-  const accessKey = (Deno.env.get("WASABI_ACCESS_KEY") || Deno.env.get("VITE_WASABI_ACCESS_KEY"))?.trim();
-  const secretKey = (Deno.env.get("WASABI_SECRET_KEY") || Deno.env.get("VITE_WASABI_SECRET_KEY"))?.trim();
-  const bucketName = (Deno.env.get("WASABI_BUCKET_NAME") || Deno.env.get("VITE_WASABI_BUCKET_NAME"))?.trim();
-  const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
+// Wasabi S3 storage proxy — credentials v2
 
-  if (!accessKey || !secretKey || !bucketName || !endpoint) {
-    throw new Error("Faltan secretos de Wasabi");
-  }
+async function sha256Hex(data: string | Uint8Array): Promise<string> {
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
+async function hmac(key: Uint8Array | string, message: string): Promise<Uint8Array> {
+  const rawKey = typeof key === "string" ? new TextEncoder().encode(key) : key;
+  const cryptoKey = await crypto.subtle.importKey("raw", rawKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(message)));
+}
+
+function hex(bytes: Uint8Array): string {
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function getConfig(): { accessKey: string; secretKey: string; bucket: string; endpoint: string; host: string; region: string } {
+  const accessKey = (Deno.env.get("VITE_WASABI_ACCESS_KEY") || Deno.env.get("WASABI_ACCESS_KEY") || "463244LR5DNM7LTWYBP8").trim();
+  const secretKey = (Deno.env.get("VITE_WASABI_SECRET_KEY") || Deno.env.get("WASABI_SECRET_KEY") || "z00eiHTuOzYFFzeZk33QgO5d312eDBP49XZWFCzn").trim();
+  const bucket = (Deno.env.get("VITE_WASABI_BUCKET_NAME") || Deno.env.get("WASABI_BUCKET_NAME") || "apedecadocumentos").trim();
+  const configuredEndpoint = (Deno.env.get("VITE_WASABI_ENDPOINT") || Deno.env.get("WASABI_ENDPOINT") || "https://s3.eu-central-2.wasabisys.com").trim();
+
+  const endpoint = configuredEndpoint.replace("s3.eu-central-1.wasabisys.com", "s3.eu-central-2.wasabisys.com").replace(/\/$/, "");
   const endpointUrl = new URL(endpoint);
-  const region = Deno.env.get("WASABI_REGION")?.trim()
-    || endpointUrl.hostname.match(/s3\.([a-z0-9-]+)\.wasabisys\.com/i)?.[1]
-    || "eu-central-1";
+  return { accessKey, secretKey, bucket, endpoint, host: endpointUrl.host, region: "eu-central-2" };
+}
 
-  const client = new S3Client({
-    region,
-    endpoint,
-    credentials: {
-      accessKeyId: accessKey,
-      secretAccessKey: secretKey,
-    },
-    forcePathStyle: true,
+async function signedRequest(
+  method: string,
+  key: string,
+  body: Uint8Array,
+  contentType?: string,
+): Promise<Response> {
+  const { accessKey, secretKey, bucket, endpoint, host, region } = getConfig();
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, "");
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = await sha256Hex(body);
+  const path = `/${bucket}/${key.split("/").map(encodeURIComponent).join("/")}`;
+  const headers: Record<string, string> = {
+    host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate,
+  };
+  if (contentType) headers["content-type"] = contentType;
+
+  const signedHeaders = Object.keys(headers).sort().join(";");
+  const canonicalHeaders = Object.keys(headers).sort().map((name) => `${name}:${headers[name].trim()}\n`).join("");
+  const canonicalRequest = [method, path, "", canonicalHeaders, signedHeaders, payloadHash].join("\n");
+  const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+  const stringToSign = ["AWS4-HMAC-SHA256", amzDate, credentialScope, await sha256Hex(canonicalRequest)].join("\n");
+  const kDate = await hmac(`AWS4${secretKey}`, dateStamp);
+  const kRegion = await hmac(kDate, region);
+  const kService = await hmac(kRegion, "s3");
+  const kSigning = await hmac(kService, "aws4_request");
+  const signature = hex(await hmac(kSigning, stringToSign));
+
+  const authorization = `AWS4-HMAC-SHA256 Credential=${accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+  return fetch(`${endpoint}${path}`, {
+    method,
+    headers: { ...headers, Authorization: authorization },
+    body: method === "PUT" ? body : undefined,
+    signal: AbortSignal.timeout(25000),
   });
-
-  return { client, bucket: bucketName };
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
 
   try {
-    const { client, bucket } = getClient();
-
+    const config = getConfig();
     const url = new URL(req.url);
     const action = url.searchParams.get("action") || "upload";
 
     if (action === "health") {
-      const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
-      const region = (Deno.env.get("WASABI_REGION") || Deno.env.get("VITE_WASABI_REGION"))?.trim()
-        || (endpoint ? new URL(endpoint).hostname.match(/s3\.([a-z0-9-]+)\.wasabisys\.com/i)?.[1] : "")
-        || "eu-central-1";
-      return new Response(
-        JSON.stringify({ configured: true, bucket, endpoint, region }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ configured: true, bucket: config.bucket, endpoint: config.endpoint, region: config.region }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // ── UPLOAD + TEST ────────────────────────────────────
-    if (req.method === "POST" && (action === "upload" || action === "test")) {
-      let key: string;
-      let bodyBytes: Uint8Array;
-      let contentType: string;
+    if (req.method === "POST" && (action === "test" || action === "upload")) {
+      const isTest = action === "test";
+      const key = isTest
+        ? `2026/test/test-${Date.now()}.txt`
+        : `2026/${url.searchParams.get("folder") || "general"}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${(url.searchParams.get("filename") || "file.bin").split(".").pop()}`;
+      const body = isTest ? new TextEncoder().encode("apedeca-test-connection") : new Uint8Array(await req.arrayBuffer());
+      const contentType = isTest ? "text/plain" : (req.headers.get("Content-Type") || "application/octet-stream");
+      const response = await signedRequest("PUT", key, body, contentType);
 
-      if (action === "test") {
-        key = `2026/test/test-${Date.now()}.txt`;
-        bodyBytes = new TextEncoder().encode("apedeca-test-connection");
-        contentType = "text/plain";
-      } else {
-        const fileName = url.searchParams.get("filename") || `file-${Date.now()}`;
-        const folder = url.searchParams.get("folder") || "general";
-        const ext = fileName.includes(".") ? fileName.split(".").pop() : "bin";
-        key = `2026/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const buf = await req.arrayBuffer();
-        bodyBytes = new Uint8Array(buf);
-        contentType = req.headers.get("Content-Type") || "application/octet-stream";
+      if (!response.ok) {
+        const detail = await response.text();
+        return new Response(JSON.stringify({ error: `Wasabi respondió ${response.status}: ${detail || response.statusText}` }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      await client.send(new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: bodyBytes,
-        ContentType: contentType,
-      }));
-
-      if (action === "test") {
-        await client.send(new DeleteObjectCommand({
-          Bucket: bucket,
-          Key: key,
-        })).catch(() => {});
-
-        return new Response(
-          JSON.stringify({ ok: true, message: `Conexión correcta. Bucket: ${bucket}` }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+      if (isTest) {
+        await signedRequest("DELETE", key, new Uint8Array()).catch(() => undefined);
+        return new Response(JSON.stringify({ ok: true, message: `Conexión correcta. Bucket: ${config.bucket}, Región: ${config.region}` }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      const endpoint = (Deno.env.get("WASABI_ENDPOINT") || Deno.env.get("VITE_WASABI_ENDPOINT"))?.trim();
-      const publicUrl = `${endpoint?.replace(/\/$/, "")}/${bucket}/${key}`;
-      return new Response(
-        JSON.stringify({ path: key, url: publicUrl }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ path: key, url: `${config.endpoint}/${config.bucket}/${key}` }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // ── DELETE ──────────────────────────────────────────
     if (req.method === "POST" && action === "delete") {
-      const { key } = await req.json();
-      if (!key) {
-        return new Response(
-          JSON.stringify({ error: "Missing key" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      await client.send(new DeleteObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      }));
-
-      return new Response(
-        JSON.stringify({ success: true }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      const { key } = await req.json() as { key?: string };
+      if (!key) return new Response(JSON.stringify({ error: "Missing key" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const response = await signedRequest("DELETE", key, new Uint8Array());
+      if (!response.ok) return new Response(JSON.stringify({ error: `Wasabi respondió ${response.status}: ${await response.text()}` }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ success: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(
-      JSON.stringify({ error: "Invalid action" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    const name = err instanceof Error ? err.name : "Unknown";
-    return new Response(
-      JSON.stringify({ error: message, name }),
-      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({ error: "Invalid action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Internal error";
+    return new Response(JSON.stringify({ error: message }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
