@@ -37,6 +37,7 @@ import {
   uploadImage,
   uploadDocument,
   testWasabiUpload,
+  testWasabiHealth,
   fetchProjects,
   createProject,
   updateProject,
@@ -1144,8 +1145,14 @@ function SettingsTab() {
 
   async function runTest() {
     setTesting(true); setTestResult(null);
-    const result = await testWasabiUpload();
-    setTestResult(result);
+    const health = await testWasabiHealth();
+    if (!health.ok) {
+      setTestResult(health);
+      setTesting(false);
+      return;
+    }
+    const upload = await testWasabiUpload();
+    setTestResult(upload);
     setTesting(false);
   }
 

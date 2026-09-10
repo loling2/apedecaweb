@@ -30,6 +30,16 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action") || "upload";
+
+    if (action === "health") {
+      return new Response(
+        JSON.stringify({ configured: true, bucket: bucketName, endpoint }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const s3 = new S3Client({
       region: "eu-central-1",
       endpoint,
@@ -39,9 +49,6 @@ Deno.serve(async (req: Request) => {
       },
       forcePathStyle: true,
     });
-
-    const url = new URL(req.url);
-    const action = url.searchParams.get("action") || "upload";
 
     // ── UPLOAD ───────────────────────────────────────────
     if (req.method === "POST" && action === "upload") {
@@ -60,6 +67,7 @@ Deno.serve(async (req: Request) => {
           Body: new Uint8Array(body),
           ContentType: contentType,
         }),
+        { abortSignal: AbortSignal.timeout(10000) },
       );
 
       const publicUrl = `${endpoint.replace(/\/$/, "")}/${bucketName}/${key}`;
@@ -114,9 +122,12 @@ Deno.serve(async (req: Request) => {
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    const message = err instanceof DOMException && err.name === "TimeoutError"
+      ? "Wasabi no respondió dentro del tiempo límite. Comprueba el endpoint y el bucket."
+      : err instanceof Error ? err.message : "Internal error";
     return new Response(
-      JSON.stringify({ error: err.message || "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ error: message }),
+      { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
