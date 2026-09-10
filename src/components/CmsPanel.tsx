@@ -1234,11 +1234,28 @@ function FooterLinkForm({ link, pages, nextOrder, onClose, onSaved }: { link: Cm
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // "Crear página nueva" mode
+  const [createPageMode, setCreatePageMode] = useState(false);
+  const [newPageTitle, setNewPageTitle] = useState('');
+  const [newPageText, setNewPageText] = useState('');
+
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setSaving(true); setError('');
-    const input = { label, page_slug: pageSlug || null, external_url: externalUrl || null, sort_order: link?.sort_order ?? nextOrder, is_visible: isVisible };
+
     try {
+      let finalSlug = pageSlug;
+
+      if (createPageMode && newPageTitle.trim()) {
+        const slug = newPageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const page = await createPage({ slug, title: newPageTitle.trim(), subtitle: null, banner_image: null, is_visible: true, sort_order: 99 });
+        if (newPageText.trim()) {
+          await createBlock({ page_id: page.id, block_type: 'text', title: newPageTitle.trim(), body: newPageText.trim(), image_url: null, sort_order: 0, is_visible: true });
+        }
+        finalSlug = slug;
+      }
+
+      const input = { label, page_slug: finalSlug || null, external_url: externalUrl || null, sort_order: link?.sort_order ?? nextOrder, is_visible: isVisible };
       if (link) await updateFooterLink(link.id, input);
       else await createFooterLink(input);
       await onSaved();
@@ -1251,15 +1268,40 @@ function FooterLinkForm({ link, pages, nextOrder, onClose, onSaved }: { link: Cm
         <Field label="Texto del enlace">
           <input required value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Ej: Política de privacidad" className={inputClass} />
         </Field>
-        <Field label="Página destino (interna)">
-          <select value={pageSlug} onChange={(e) => setPageSlug(e.target.value)} className={inputClass}>
-            <option value="">— Ninguna —</option>
-            {pages.map((p) => <option key={p.id} value={p.slug}>{p.title} (/{p.slug})</option>)}
-          </select>
-        </Field>
-        <Field label="O URL externa (si no es una página interna)">
-          <input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" className={inputClass} />
-        </Field>
+
+        <div className="flex gap-2 rounded-lg bg-slate-50 p-1">
+          <button type="button" onClick={() => setCreatePageMode(false)} className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${!createPageMode ? 'bg-sky-500 text-slate-950' : 'text-slate-600 hover:bg-slate-100'}`}>
+            Página existente
+          </button>
+          <button type="button" onClick={() => setCreatePageMode(true)} className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${createPageMode ? 'bg-sky-500 text-slate-950' : 'text-slate-600 hover:bg-slate-100'}`}>
+            Crear página nueva
+          </button>
+        </div>
+
+        {createPageMode ? (
+          <>
+            <Field label="Título de la nueva página">
+              <input required={createPageMode} value={newPageTitle} onChange={(e) => setNewPageTitle(e.target.value)} placeholder="Ej: Aviso legal" className={inputClass} />
+            </Field>
+            <Field label="Contenido de la página (pega aquí el texto)">
+              <textarea value={newPageText} onChange={(e) => setNewPageText(e.target.value)} placeholder="Pega aquí el texto legal o el contenido que quieras mostrar en la página…" className={`${inputClass} min-h-48`} />
+            </Field>
+            <p className="text-sm text-slate-500">Se creará una página en blanco con este título. El texto que pegues aquí aparecerá debajo del título. Podrás editarla más tarde desde "Páginas y bloques".</p>
+          </>
+        ) : (
+          <>
+            <Field label="Página destino (interna)">
+              <select value={pageSlug} onChange={(e) => setPageSlug(e.target.value)} className={inputClass}>
+                <option value="">— Ninguna —</option>
+                {pages.map((p) => <option key={p.id} value={p.slug}>{p.title} (/{p.slug})</option>)}
+              </select>
+            </Field>
+            <Field label="O URL externa (si no es una página interna)">
+              <input value={externalUrl} onChange={(e) => setExternalUrl(e.target.value)} placeholder="https://…" className={inputClass} />
+            </Field>
+          </>
+        )}
+
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} className="h-5 w-5 rounded border-slate-300" />
           <span className="text-sm font-semibold">Visible en la web</span>
