@@ -448,9 +448,56 @@ function BlockRenderer({ block }: { block: CmsBlock }) {
       return <VolunteerBenefitsBlock block={block} />;
     case 'volunteer-process':
       return <VolunteerProcessBlock block={block} />;
+    case 'link-group':
+      return <LinkGroupBlock block={block} />;
     default:
       return null;
   }
+}
+
+type LinkCardItem = { label: string; url: string; description?: string };
+
+function parseLinkGroup(body: string | null): LinkCardItem[] {
+  if (!body) return [];
+  return body
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [label, url, description] = line.split('|').map((s) => s?.trim() ?? '');
+      return { label: label || '', url: url || '#', description: description || undefined };
+    })
+    .filter((item) => item.label);
+}
+
+function LinkGroupBlock({ block }: { block: CmsBlock }) {
+  const items = parseLinkGroup(block.body);
+  if (items.length === 0) return null;
+
+  return (
+    <section className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
+      {block.title && <h2 className="mb-10 text-center text-3xl font-light text-slate-900 sm:text-4xl">{block.title}</h2>}
+      <div className="grid gap-6 sm:grid-cols-3">
+        {items.map((item, idx) => {
+          const isExternal = item.url?.startsWith('http');
+          return (
+            <a
+              key={idx}
+              href={item.url ?? '#'}
+              {...(isExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
+              className="group flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm transition hover:-translate-y-1 hover:border-sky-400 hover:shadow-md"
+            >
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-50 text-sky-600 transition group-hover:bg-sky-100">
+                <ExternalLink size={26} />
+              </div>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">{item.label}</h3>
+              {item.description && <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>}
+            </a>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 function HeroBlock({ block }: { block: CmsBlock }) {

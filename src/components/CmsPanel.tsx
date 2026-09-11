@@ -295,6 +295,7 @@ function BlockEditor({ page, onBack }: { page: CmsPage; onBack: () => void }) {
     'project-links': 'Enlaces de proyectos',
     'volunteer-benefits': 'Beneficios del voluntariado',
     'volunteer-process': 'Proceso de voluntariado',
+    'link-group': 'Grupo de enlaces',
   };
 
   return (
@@ -465,6 +466,7 @@ function BlockForm({ pageId, block, nextOrder, onClose, onSaved }: { pageId: str
     { value: 'project-links', label: 'Enlaces de proyectos' },
     { value: 'volunteer-benefits', label: 'Beneficios del voluntariado' },
     { value: 'volunteer-process', label: 'Proceso de voluntariado' },
+    { value: 'link-group', label: 'Grupo de enlaces' },
   ];
 
   return (
@@ -485,6 +487,12 @@ function BlockForm({ pageId, block, nextOrder, onClose, onSaved }: { pageId: str
         {(blockType === 'text' || blockType === 'hero' || blockType === 'documents' || blockType === 'button' || blockType === 'list' || blockType === 'areas' || blockType === 'accordion' || blockType === 'volunteer-benefits' || blockType === 'volunteer-process') && (
           <Field label={blockType === 'button' ? 'Texto del botón' : 'Contenido / Descripción'}>
             <textarea value={body} onChange={(e) => setBody(e.target.value)} className={`${inputClass} min-h-28`} />
+          </Field>
+        )}
+
+        {blockType === 'link-group' && (
+          <Field label='Enlaces (una línea por enlace: texto|url|descripción opcional)'>
+            <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder='Acceder al formulario|https://ejemplo.com|Formulario de denuncia&#10;Normativa|/normativa|Documento legal' className={`${inputClass} min-h-28 font-mono text-sm`} />
           </Field>
         )}
 

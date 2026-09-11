@@ -18,7 +18,7 @@ export type CmsPage = {
 export type CmsBlock = {
   id: string;
   page_id: string;
-  block_type: 'hero' | 'text' | 'image' | 'slider' | 'button' | 'documents' | 'stats' | 'contact' | 'list' | 'areas' | 'accordion' | 'project-links' | 'volunteer-benefits' | 'volunteer-process';
+  block_type: 'hero' | 'text' | 'image' | 'slider' | 'button' | 'documents' | 'stats' | 'contact' | 'list' | 'areas' | 'accordion' | 'project-links' | 'volunteer-benefits' | 'volunteer-process' | 'link-group';
   title: string | null;
   body: string | null;
   image_url: string | null;
