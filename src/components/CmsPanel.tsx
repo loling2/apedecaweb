@@ -142,6 +142,7 @@ function PagesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedPage, setSelectedPage] = useState<CmsPage | null>(null);
+  const [backgroundPage, setBackgroundPage] = useState<CmsPage | null>(null);
   const [showPageForm, setShowPageForm] = useState(false);
 
   useEffect(() => { refresh(); }, []);
@@ -182,6 +183,11 @@ function PagesTab() {
               <p className="mt-0.5 truncate text-sm text-slate-500">/{page.slug}{page.subtitle ? ` · ${page.subtitle}` : ''}</p>
             </div>
             <div className="flex flex-shrink-0 gap-2">
+              {page.slug === 'voluntariado' && (
+                <button onClick={() => setBackgroundPage(page)} className="rounded-lg border border-lime-300 bg-lime-50 px-4 py-2 text-sm font-semibold text-lime-800 transition hover:border-lime-500 hover:bg-lime-100">
+                  Cambiar fondo
+                </button>
+              )}
               <button onClick={() => setSelectedPage(page)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
                 Editar bloques
               </button>
@@ -194,6 +200,7 @@ function PagesTab() {
       </div>
 
       {showPageForm && <PageForm onClose={() => setShowPageForm(false)} onSaved={async () => { setShowPageForm(false); await refresh(); }} />}
+      {backgroundPage && <PageEditForm page={backgroundPage} onClose={() => setBackgroundPage(null)} onSaved={async () => { setBackgroundPage(null); await refresh(); }} />}
     </div>
   );
 }
@@ -378,6 +385,11 @@ function PageEditForm({ page, onClose, onSaved }: { page: CmsPage; onClose: () =
         <Field label="Título"><input required value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} /></Field>
         <Field label="Subtítulo"><input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} className={inputClass} /></Field>
         <ImageInput label="Imagen de cabecera" value={bannerImage} onChange={setBannerImage} />
+        {page.slug === 'voluntariado' && (
+          <button type="button" onClick={() => setBannerImage('/images/voluntariado/imagen.png')} className="w-full rounded-lg border border-lime-300 bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-800 transition hover:border-lime-500 hover:bg-lime-100">
+            Usar la imagen preparada para Voluntariado
+          </button>
+        )}
         <label className="flex items-center gap-3">
           <input type="checkbox" checked={isVisible} onChange={(e) => setIsVisible(e.target.checked)} className="h-5 w-5 rounded border-slate-300" />
           <span className="text-sm font-semibold">Visible en la web</span>

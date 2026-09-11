@@ -341,6 +341,8 @@ export type TransparencySection = {
   sort_order: number;
   is_visible: boolean;
   meta: string | null;
+  download_label: string | null;
+  file_path: string | null;
 };
 
 export type TransparencyItem = {
