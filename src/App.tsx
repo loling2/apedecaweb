@@ -70,8 +70,6 @@ import CmsPanel from '@/components/CmsPanel';
 import { hasSupabaseConfig } from '@/lib/supabase';
 import { fallbackNavItems, fallbackSettings, fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
 
-type AuthMode = 'sign-in' | 'sign-up';
-
 function usePath() {
   const [path, setPath] = useState(window.location.pathname);
   useEffect(() => {
@@ -104,7 +102,6 @@ function App() {
   const [footerLinks, setFooterLinks] = useState<CmsFooterLink[]>([]);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<AuthMode>('sign-in');
   const [loadingContent, setLoadingContent] = useState(true);
   const [contentError, setContentError] = useState('');
 
@@ -158,7 +155,6 @@ function App() {
         navItems={navItems}
         settings={settings}
         onNavigate={navigate}
-        onEditor={() => sessionEmail ? navigate('/admin') : setAuthOpen(true)}
         sessionEmail={sessionEmail}
         onSignOut={handleSignOut}
       />
@@ -181,9 +177,9 @@ function App() {
       ) : (
         <DynamicPage slug={slug} />
       )}
-      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} footerLinks={footerLinks} onNavigate={navigate} />}
+      {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} footerLinks={footerLinks} onNavigate={navigate} onAdminAccess={() => sessionEmail ? navigate('/admin') : setAuthOpen(true)} />}
       {currentPath !== '/admin' && <AccessibilityWidget open={accessibilityOpen} setOpen={setAccessibilityOpen} />}
-      {authOpen && <AuthModal mode={authMode} setMode={setAuthMode} onClose={() => setAuthOpen(false)} />}
+      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
       {loadingContent && <div className="fixed bottom-5 left-5 rounded-full bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">Conectando contenido…</div>}
       {contentError && <div className="fixed bottom-5 left-5 rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-900 shadow-lg">{contentError}</div>}
     </div>
@@ -259,7 +255,7 @@ function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value
 
 /* ==================== TOP BAR ==================== */
 
-function TopBar({ navItems, settings, onNavigate, onEditor, sessionEmail, onSignOut }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onNavigate: (href: string) => void; onEditor: () => void; sessionEmail: string | null; onSignOut: () => void }) {
+function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { navItems: CmsNavItem[]; settings: CmsSettings | null; onNavigate: (href: string) => void; sessionEmail: string | null; onSignOut: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const visibleItems = navItems.filter((i) => i.is_visible).sort((a, b) => a.sort_order - b.sort_order);
 
@@ -299,7 +295,6 @@ function TopBar({ navItems, settings, onNavigate, onEditor, sessionEmail, onSign
           })}
           <button onClick={() => onNavigate('/trabaja-con-nosotros')} className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</button>
           <button onClick={() => onNavigate('#contacto')} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
-          <button onClick={onEditor} className="my-2 flex items-center justify-center gap-2 rounded border border-slate-200 px-4 py-3 text-sm text-slate-700 transition hover:border-sky-400 hover:text-sky-600 md:my-0"><LockKeyhole size={15} /> {sessionEmail ? 'Editar web' : 'Acceso admin'}</button>
           {sessionEmail && <button onClick={onSignOut} className="py-3 text-xs text-slate-500 hover:text-red-600 md:py-0">Salir</button>}
         </div>
       </nav>
@@ -1658,7 +1653,7 @@ function ApplicationModal({ offer, onClose }: { offer: ApeJobOffer; onClose: () 
 
 /* ==================== FOOTER ==================== */
 
-function Footer({ navItems, settings, footerLinks, onNavigate }: { navItems: CmsNavItem[]; settings: CmsSettings | null; footerLinks: CmsFooterLink[]; onNavigate: (href: string) => void }) {
+function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: { navItems: CmsNavItem[]; settings: CmsSettings | null; footerLinks: CmsFooterLink[]; onNavigate: (href: string) => void; onAdminAccess: () => void }) {
   const visibleItems = navItems.filter((i) => i.is_visible).sort((a, b) => a.sort_order - b.sort_order);
   const visibleFooterLinks = footerLinks.filter((l) => l.is_visible).sort((a, b) => a.sort_order - b.sort_order);
   const socialLinks = [
@@ -1704,7 +1699,10 @@ function Footer({ navItems, settings, footerLinks, onNavigate }: { navItems: Cms
       </div>
       <div className="border-t border-sky-800">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-5 text-xs text-sky-300 sm:flex-row lg:px-10">
-          <p>Copyright © {year} {settings?.site_name ?? 'Apedeca'} · Todos los derechos reservados</p>
+          <div className="flex items-center gap-4">
+            <p>Copyright © {year} {settings?.site_name ?? 'Apedeca'} · Todos los derechos reservados</p>
+            <button onClick={onAdminAccess} className="rounded p-1 text-sky-300 transition hover:bg-sky-800 hover:text-white" aria-label="Acceso privado" title="Acceso privado"><LockKeyhole size={15} /></button>
+          </div>
           <div className="flex gap-4">
             <button onClick={() => onNavigate('/aviso-legal')} className="transition hover:text-white">Aviso legal</button>
             <button onClick={() => onNavigate('/politica-privacidad')} className="transition hover:text-white">Privacidad</button>
@@ -1719,7 +1717,7 @@ function Footer({ navItems, settings, footerLinks, onNavigate }: { navItems: Cms
 
 /* ==================== AUTH ==================== */
 
-function AuthModal({ mode, setMode, onClose }: { mode: AuthMode; setMode: (mode: AuthMode) => void; onClose: () => void }) {
+function AuthModal({ onClose }: { onClose: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -1727,10 +1725,9 @@ function AuthModal({ mode, setMode, onClose }: { mode: AuthMode; setMode: (mode:
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setMessage('');
-    const response = mode === 'sign-in' ? await supabase.auth.signInWithPassword({ email, password }) : await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (response.error) setMessage(response.error.message);
-    else if (mode === 'sign-up') setMessage('Cuenta creada. Ya puedes entrar al editor.');
+    if (error) setMessage('El correo o la contraseña no son correctos.');
     else onClose();
   }
 
@@ -1740,16 +1737,15 @@ function AuthModal({ mode, setMode, onClose }: { mode: AuthMode; setMode: (mode:
         <button onClick={onClose} className="absolute right-4 top-4 text-slate-400 hover:text-slate-900" aria-label="Cerrar"><X /></button>
         <div className="mb-7">
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-600"><LockKeyhole /></div>
-          <h2 className="text-2xl font-semibold text-slate-900">Acceso al editor</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">Inicia sesión para actualizar los textos de la web desde un panel visual.</p>
+          <h2 className="text-2xl font-semibold text-slate-900">Acceso privado</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Introduce tus datos para acceder a la gestión de la web.</p>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Correo electrónico" className="w-full rounded border border-slate-200 px-4 py-3 outline-none focus:border-sky-500" />
           <input required minLength={6} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña" className="w-full rounded border border-slate-200 px-4 py-3 outline-none focus:border-sky-500" />
-          <button disabled={busy} className="w-full rounded bg-sky-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-sky-400 disabled:opacity-60">{busy ? 'Comprobando…' : mode === 'sign-in' ? 'Entrar' : 'Crear cuenta'}</button>
+          <button disabled={busy} className="w-full rounded bg-sky-500 px-4 py-3 font-semibold text-slate-950 transition hover:bg-sky-400 disabled:opacity-60">{busy ? 'Comprobando…' : 'Entrar'}</button>
         </form>
         {message && <p className="mt-4 rounded bg-amber-50 p-3 text-sm text-amber-900">{message}</p>}
-        <button onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')} className="mt-6 text-sm text-sky-600 hover:underline">{mode === 'sign-in' ? 'Necesito crear una cuenta' : 'Ya tengo una cuenta'}</button>
       </div>
     </div>
   );
