@@ -35,6 +35,10 @@ import {
   Phone,
   Send,
   Upload,
+  Volume2,
+  Pause,
+  Play,
+  Square,
   X,
   Youtube,
   UsersRound,
@@ -205,6 +209,9 @@ function BarcodeIcon({ size = 24 }: { size?: string | number }) {
 
 function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value: boolean) => void }) {
   const [activeOptions, setActiveOptions] = useState<AccessibilityOption[]>([]);
+  const [reading, setReading] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [speechMessage, setSpeechMessage] = useState('');
 
   useEffect(() => {
     const saved = window.localStorage.getItem('apedeca-accessibility');
@@ -223,8 +230,46 @@ function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value
     window.localStorage.setItem('apedeca-accessibility', JSON.stringify(activeOptions));
   }, [activeOptions]);
 
+  useEffect(() => () => window.speechSynthesis?.cancel(), []);
+
   function toggleOption(option: AccessibilityOption) {
     setActiveOptions((current) => current.includes(option) ? current.filter((item) => item !== option) : [...current, option]);
+  }
+
+  function startReading() {
+    if (!('speechSynthesis' in window)) {
+      setSpeechMessage('Tu navegador no permite leer la página en voz alta.');
+      return;
+    }
+    const pageText = document.querySelector('main')?.textContent?.replace(/\s+/g, ' ').trim();
+    if (!pageText) {
+      setSpeechMessage('No hay contenido disponible para leer.');
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(pageText);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.95;
+    utterance.onstart = () => { setReading(true); setPaused(false); setSpeechMessage(''); };
+    utterance.onend = () => { setReading(false); setPaused(false); };
+    utterance.onerror = () => { setReading(false); setPaused(false); setSpeechMessage('No se ha podido iniciar la lectura.'); };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function pauseReading() {
+    window.speechSynthesis.pause();
+    setPaused(true);
+  }
+
+  function resumeReading() {
+    window.speechSynthesis.resume();
+    setPaused(false);
+  }
+
+  function stopReading() {
+    window.speechSynthesis.cancel();
+    setReading(false);
+    setPaused(false);
   }
 
   function reset() {
@@ -242,7 +287,23 @@ function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value
                 <Icon size={19} /> <span>{label}</span>
               </button>
             ))}
-            <button onClick={reset} className="flex w-full items-center gap-4 rounded px-2 py-3 text-left text-sm text-slate-700 transition hover:bg-orange-50"><RotateCcw size={19} /> <span>Restablecer</span></button>
+            <div className="mt-2 border-t border-slate-200 pt-3">
+              {!reading ? (
+                <button onClick={startReading} className="flex w-full items-center gap-4 rounded px-2 py-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-orange-50"><Volume2 size={19} /> <span>Leer la página</span></button>
+              ) : (
+                <div className="space-y-2">
+                  <p className="px-2 text-xs font-semibold uppercase tracking-wide text-orange-700">Lectura en curso</p>
+                  <div className="flex gap-2">
+                    <button onClick={paused ? resumeReading : pauseReading} className="flex flex-1 items-center justify-center gap-2 rounded bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-800 transition hover:bg-orange-100" aria-label={paused ? 'Continuar lectura' : 'Pausar lectura'}>
+                      {paused ? <Play size={16} /> : <Pause size={16} />} {paused ? 'Continuar' : 'Pausar'}
+                    </button>
+                    <button onClick={stopReading} className="flex items-center justify-center gap-2 rounded border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-orange-400 hover:text-orange-700" aria-label="Detener lectura"><Square size={15} /> Detener</button>
+                  </div>
+                </div>
+              )}
+              {speechMessage && <p className="mt-2 rounded bg-amber-50 p-2 text-xs text-amber-900">{speechMessage}</p>}
+            </div>
+            <button onClick={reset} className="mt-2 flex w-full items-center gap-4 rounded px-2 py-3 text-left text-sm text-slate-700 transition hover:bg-orange-50"><RotateCcw size={19} /> <span>Restablecer</span></button>
           </div>
         </div>
       )}
