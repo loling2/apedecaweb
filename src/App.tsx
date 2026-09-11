@@ -507,8 +507,6 @@ function HeroBlock({ block }: { block: CmsBlock }) {
   return (
     <section id="inicio" className="relative flex min-h-[560px] items-center overflow-hidden bg-slate-800" style={block.image_url ? { backgroundImage: `linear-gradient(90deg, rgba(7,22,35,.8), rgba(7,22,35,.5)), url(${block.image_url})`, backgroundPosition: 'center', backgroundSize: 'cover' } : {}}>
       <div className="mx-auto w-full max-w-5xl px-6 py-24 text-center text-white">
-        <div className="mx-auto mb-8 h-1 w-20 bg-lime-300" />
-        <p className="mb-3 text-sm font-bold uppercase tracking-[.35em] text-lime-300">Asociación canaria</p>
         {block.title && <h1 className="text-6xl font-light tracking-tight sm:text-8xl">{block.title}</h1>}
         {block.body && <p className="mx-auto mt-5 max-w-3xl text-xl font-light leading-relaxed sm:text-2xl">{block.body}</p>}
         <button onClick={() => document.getElementById('historia')?.scrollIntoView({ behavior: 'smooth' })} className="mt-9 inline-flex items-center gap-3 rounded bg-lime-100 px-8 py-4 font-semibold text-slate-900 transition hover:-translate-y-1 hover:bg-white">Conócenos <ArrowRight size={18} /></button>
