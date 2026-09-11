@@ -279,7 +279,7 @@ function AccessibilityWidget({ open, setOpen }: { open: boolean; setOpen: (value
   return (
     <div className="fixed right-0 top-1/2 z-50 -translate-y-1/2">
       {open && (
-        <div className="absolute bottom-0 right-0 w-[min(320px,calc(100vw-40px))] -translate-y-0 overflow-hidden rounded-l-sm border border-orange-500 bg-white shadow-2xl">
+        <div className="fixed right-0 top-1/2 max-h-[calc(100vh-32px)] w-[min(320px,calc(100vw-40px))] -translate-y-1/2 overflow-hidden rounded-l-sm border border-orange-500 bg-white shadow-2xl lg:bottom-0 lg:top-auto lg:translate-y-0">
           <div className="border-b border-slate-200 px-5 py-5 text-lg font-semibold text-slate-800">Herramientas de accesibilidad</div>
           <div className="max-h-[min(520px,70vh)] overflow-y-auto px-5 py-3">
             {accessibilityOptions.map(({ key, label, icon: Icon }) => (
@@ -349,13 +349,13 @@ function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { n
         </div>
       </div>
       <nav className={`${menuOpen ? 'block' : 'hidden'} border-b border-slate-100 md:block`}>
-        <div className="mx-auto flex max-w-7xl flex-col items-stretch justify-center px-5 md:flex-row md:items-center md:gap-6 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col items-stretch justify-center px-5 py-3 md:flex-row md:items-center md:gap-6 md:py-0 lg:px-10">
           {visibleItems.map((item) => {
             const href = item.external_url ?? (item.page_slug === 'inicio' ? '/' : `/${item.page_slug}`);
-            return <button key={item.id} onClick={() => onNavigate(href)} className="py-3 text-center text-base transition hover:text-sky-600 md:py-5 text-slate-600">{item.label}</button>;
+            return <button key={item.id} onClick={() => { setMenuOpen(false); onNavigate(href); }} className="py-3 text-center text-base transition hover:text-sky-600 md:py-5 text-slate-600">{item.label}</button>;
           })}
-          <button onClick={() => onNavigate('/trabaja-con-nosotros')} className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</button>
-          <button onClick={() => onNavigate('#contacto')} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
+          <button onClick={() => { setMenuOpen(false); onNavigate('/trabaja-con-nosotros'); }} className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</button>
+          <button onClick={() => { setMenuOpen(false); onNavigate('#contacto'); }} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
           {sessionEmail && <button onClick={onSignOut} className="py-3 text-xs text-slate-500 hover:text-red-600 md:py-0">Salir</button>}
         </div>
       </nav>
