@@ -71,6 +71,7 @@ import {
   type TransparencyDoc,
 } from '@/lib/cms';
 import CmsPanel from '@/components/CmsPanel';
+import DenunciaFormPage from '@/components/DenunciaFormPage';
 import { hasSupabaseConfig } from '@/lib/supabase';
 import { fallbackNavItems, fallbackSettings, fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
 
@@ -178,6 +179,8 @@ function App() {
         <VoluntariadoPage />
       ) : currentPath === '/transparencia' ? (
         <TransparencyPage />
+      ) : currentPath === '/formulario-denuncias' ? (
+        <DenunciaFormPage onBack={() => navigate('/canal-de-denuncias')} />
       ) : (
         <DynamicPage slug={slug} />
       )}
