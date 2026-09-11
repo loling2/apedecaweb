@@ -1043,7 +1043,6 @@ function TransparencyPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedLabel, setSelectedLabel] = useState('');
-  const [loadedSections, setLoadedSections] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let active = true;
@@ -1054,40 +1053,34 @@ function TransparencyPage() {
         if (!active) return;
         setSections(visible);
         if (visible.length > 0) setSelectedLabel(visible[0].label);
+        setLoading(false);
+
+        await Promise.all(visible.map(async (section) => {
+          try {
+            const items = (await fetchTransparencyItems(section.id)).sort((a, b) => a.sort_order - b.sort_order);
+            if (!active) return;
+            setItemsBySection((previous) => ({ ...previous, [section.id]: items }));
+
+            const docResults = await Promise.all(items.map((item) => fetchTransparencyDocs(item.id)));
+            if (!active) return;
+            const docsMap: Record<string, TransparencyDoc[]> = {};
+            items.forEach((item, index) => {
+              docsMap[item.id] = docResults[index].sort((a, b) => a.sort_order - b.sort_order);
+            });
+            setDocsByItem((previous) => ({ ...previous, ...docsMap }));
+          } catch {
+            if (active) setError('Algunos documentos de transparencia no se pudieron cargar.');
+          }
+        }));
       } catch {
-        if (active) setError('No se pudo cargar el contenido de transparencia.');
-      } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setError('No se pudo cargar el contenido de transparencia.');
+          setLoading(false);
+        }
       }
     })();
     return () => { active = false; };
   }, []);
-
-  useEffect(() => {
-    if (!selectedLabel) return;
-    const section = sections.find((s) => s.label === selectedLabel);
-    if (!section || loadedSections.has(section.id)) return;
-    setLoadedSections((prev) => new Set(prev).add(section.id));
-
-    let active = true;
-    (async () => {
-      try {
-        const items = (await fetchTransparencyItems(section.id)).sort((a, b) => a.sort_order - b.sort_order);
-        if (!active) return;
-        setItemsBySection((prev) => ({ ...prev, [section.id]: items }));
-
-        const docResults = await Promise.all(items.map((item) => fetchTransparencyDocs(item.id)));
-        if (!active) return;
-        const docsMap: Record<string, TransparencyDoc[]> = {};
-        items.forEach((item, i) => {
-          docsMap[item.id] = docResults[i].sort((a, b) => a.sort_order - b.sort_order);
-        });
-        setDocsByItem((prev) => ({ ...prev, ...docsMap }));
-      } catch {
-      }
-    })();
-    return () => { active = false; };
-  }, [selectedLabel, sections, loadedSections]);
 
   function selectSection(label: string) {
     setSelectedLabel(label);
@@ -1153,10 +1146,21 @@ function VoluntariadoPage() {
   if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-slate-400">Cargando…</div>;
 
   const tabs = blocks.filter((b) => b.block_type === 'text');
+  const contactTab: CmsBlock = {
+    id: 'volunteer-contact-tab',
+    page_id: page?.id ?? 'voluntariado',
+    block_type: 'text',
+    title: 'Quiero participar',
+    body: 'Si quieres colaborar con APEDECA, escríbenos y te explicaremos las distintas formas de participar en nuestros proyectos y actividades.',
+    image_url: null,
+    sort_order: tabs.length,
+    is_visible: true,
+  };
+  const visibleTabs = [...tabs, contactTab];
   const contactBlock = blocks.find((b) => b.block_type === 'contact');
   const benefitsBlock = blocks.find((b) => b.block_type === 'volunteer-benefits');
   const processBlock = blocks.find((b) => b.block_type === 'volunteer-process');
-  const activeTab = tabs[selectedTab];
+  const activeTab = visibleTabs[selectedTab];
 
   return (
     <main className="bg-white">
@@ -1176,7 +1180,7 @@ function VoluntariadoPage() {
       {tabs.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-24">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {tabs.map((tab, index) => {
+            {visibleTabs.map((tab, index) => {
               const Icon = voluntariadoIcons[index % voluntariadoIcons.length];
               return (
                 <button key={tab.id} type="button" onClick={() => setSelectedTab(index)} aria-pressed={selectedTab === index} className={`group min-h-44 rounded-sm border-2 px-6 py-7 text-center transition hover:-translate-y-1 ${selectedTab === index ? 'border-sky-500 bg-sky-50 shadow-md' : 'border-slate-100 bg-white hover:border-sky-200'}`}>
@@ -1192,7 +1196,11 @@ function VoluntariadoPage() {
                 <p className="text-sm font-bold uppercase tracking-[.25em] text-sky-600">{activeTab.title}</p>
                 {activeTab.title && <h2 className="mt-3 text-4xl font-light text-slate-900 sm:text-5xl">{activeTab.title}</h2>}
                 {activeTab.body && <p className="mt-7 whitespace-pre-line text-lg leading-9 text-slate-600">{activeTab.body}</p>}
-                <a href="#contacto" className="mt-8 inline-flex rounded bg-sky-500 px-7 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Quiero participar</a>
+                {selectedTab === visibleTabs.length - 1 ? (
+                  <a href="mailto:info@apedeca.es" className="mt-8 inline-flex rounded bg-sky-500 px-7 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Escríbenos</a>
+                ) : (
+                  <a href="#contacto" className="mt-8 inline-flex rounded bg-sky-500 px-7 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Quiero participar</a>
+                )}
               </div>
             </div>
           )}
