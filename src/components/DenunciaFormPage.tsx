@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
+import { fetchPageBySlug, fetchBlocks, type CmsBlock, type CmsPage } from '@/lib/cms';
+import { hasSupabaseConfig } from '@/lib/supabase';
+import { fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
 
 type DenunciaFormPageProps = { onBack: () => void };
 
@@ -7,6 +10,37 @@ export default function DenunciaFormPage({ onBack }: DenunciaFormPageProps) {
   const [communicationType, setCommunicationType] = useState('');
   const [accepted, setAccepted] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [page, setPage] = useState<CmsPage | null>(null);
+  const [blocks, setBlocks] = useState<CmsBlock[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!hasSupabaseConfig) {
+        const found = fallbackPages.find((p) => p.slug === 'formulario-denuncias');
+        if (found && active) {
+          setPage(found);
+          setBlocks((fallbackBlocks[found.id] ?? []).filter((b) => b.is_visible));
+        }
+        setLoading(false);
+        return;
+      }
+      try {
+        const found = await fetchPageBySlug('formulario-denuncias');
+        if (!found || !active) { setLoading(false); return; }
+        const blks = await fetchBlocks(found.id);
+        if (!active) return;
+        setPage(found);
+        setBlocks(blks.filter((b) => b.is_visible).sort((a, b) => a.sort_order - b.sort_order));
+      } catch {
+        /* page not found is fine, form still works */
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, []);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -23,14 +57,21 @@ export default function DenunciaFormPage({ onBack }: DenunciaFormPageProps) {
           </button>
           <div className="max-w-3xl">
             <p className="text-sm font-bold uppercase tracking-[.25em] text-amber-100">Canal seguro y confidencial</p>
-            <h1 className="mt-4 text-4xl font-light leading-tight sm:text-6xl">Tramitar información o consulta</h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-orange-50">Completa este primer paso para acceder al formulario de comunicación del canal de denuncias.</p>
+            <h1 className="mt-4 text-4xl font-light leading-tight sm:text-6xl">{page?.title ?? 'Tramitar información o consulta'}</h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-orange-50">{page?.subtitle ?? 'Completa este primer paso para acceder al formulario de comunicación del canal de denuncias.'}</p>
           </div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-10 px-6 py-14 lg:grid-cols-[1fr_320px] lg:px-10">
         <div>
+          {!loading && blocks.filter((b) => b.block_type === 'text').map((block) => (
+            <div key={block.id} className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              {block.title && <h2 className="mb-4 text-2xl font-light text-slate-900">{block.title}</h2>}
+              {block.body && <p className="whitespace-pre-line leading-8 text-slate-600">{block.body}</p>}
+            </div>
+          ))}
+
           <div className="mb-8 flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-slate-700">
             <Clock3 className="mt-0.5 flex-shrink-0 text-orange-600" size={22} />
             <p className="leading-7">Por motivos de seguridad tienes <strong>20 minutos</strong> para realizar tu comunicación desde que accedes a esta página.</p>
