@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import {
+  Briefcase,
   Check,
   ChevronDown,
   ChevronUp,
@@ -16,6 +17,13 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import {
+  fetchAllJobOffers,
+  createJobOffer,
+  updateJobOffer,
+  deleteJobOffer,
+  type ApeJobOffer,
+} from '@/lib/jobs';
 import {
   fetchPages,
   createPage,
@@ -70,7 +78,7 @@ import {
   type TransparencyDoc,
 } from '@/lib/cms';
 
-type Tab = 'pages' | 'projects' | 'nav' | 'transparency' | 'footer' | 'settings';
+type Tab = 'pages' | 'projects' | 'jobs' | 'nav' | 'transparency' | 'footer' | 'settings';
 
 type Props = {
   userEmail: string;
@@ -90,6 +98,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
         <nav className="flex-1 space-y-1">
           <SidebarLink active={tab === 'pages'} onClick={() => setTab('pages')} icon={LayoutDashboard} label="Páginas y bloques" />
           <SidebarLink active={tab === 'projects'} onClick={() => setTab('projects')} icon={FolderCog} label="Proyectos" />
+          <SidebarLink active={tab === 'jobs'} onClick={() => setTab('jobs')} icon={Briefcase} label="Trabaja con nosotros" />
           <SidebarLink active={tab === 'transparency'} onClick={() => setTab('transparency')} icon={FileText} label="Transparencia" />
           <SidebarLink active={tab === 'nav'} onClick={() => setTab('nav')} icon={Link2} label="Menú de navegación" />
           <SidebarLink active={tab === 'footer'} onClick={() => setTab('footer')} icon={Link2} label="Enlaces de interés" />
@@ -106,9 +115,9 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
       <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-slate-900 px-4 py-3 text-white sm:hidden">
         <span className="text-sm font-semibold">CMS Apedeca</span>
         <div className="flex gap-2">
-          {(['pages', 'projects', 'transparency', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
+          {(['pages', 'projects', 'jobs', 'transparency', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded px-3 py-1.5 text-xs ${tab === t ? 'bg-sky-500' : 'bg-slate-800'}`}>
-              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
+              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'jobs' ? 'Empleo' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
             </button>
           ))}
           <button onClick={onClose} className="rounded bg-slate-800 p-1.5"><X size={16} /></button>
@@ -118,6 +127,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
       <div className="flex-1 overflow-y-auto pt-14 sm:pt-0">
         {tab === 'pages' && <PagesTab />}
         {tab === 'projects' && <ProjectsTab />}
+        {tab === 'jobs' && <JobsTab />}
         {tab === 'transparency' && <TransparencyTab />}
         {tab === 'nav' && <NavTab />}
         {tab === 'footer' && <FooterTab />}
@@ -1032,6 +1042,137 @@ function TransparencyItemForm({ sectionId, item, nextOrder, onClose, onSaved }: 
 
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         <SaveButton saving={saving} label="Guardar línea" />
+      </form>
+    </Modal>
+  );
+}
+
+/* ==================== JOBS TAB ==================== */
+
+function JobsTab() {
+  const [offers, setOffers] = useState<ApeJobOffer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<ApeJobOffer | null>(null);
+
+  useEffect(() => { refresh(); }, []);
+
+  async function refresh() {
+    setLoading(true);
+    try { setOffers(await fetchAllJobOffers()); } catch { setError('No se pudieron cargar las ofertas.'); } finally { setLoading(false); }
+  }
+
+  async function togglePublished(offer: ApeJobOffer) {
+    await updateJobOffer(offer.id, { published: !offer.published });
+    await refresh();
+  }
+
+  if (loading) return <div className="p-10 text-slate-500">Cargando ofertas…</div>;
+
+  return (
+    <div className="mx-auto max-w-4xl p-6 sm:p-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-light text-slate-900">Trabaja con nosotros</h1>
+          <p className="mt-2 text-slate-500">Gestiona las ofertas de empleo que se muestran en la web. Solo las ofertas activas son visibles para los visitantes.</p>
+        </div>
+        <button onClick={() => { setEditingOffer(null); setShowForm(true); }} className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+          <Plus size={18} /> Nueva oferta
+        </button>
+      </div>
+
+      {error && <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      <div className="mt-8 space-y-3">
+        {offers.length === 0 && <p className="py-10 text-center text-slate-400">No hay ofertas todavía. Crea la primera con "Nueva oferta".</p>}
+        {offers.map((offer) => (
+          <div key={offer.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            {offer.image_url ? (
+              <img src={offer.image_url} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-14 w-20 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-400"><Briefcase size={22} /></div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-semibold text-slate-900">{offer.title}</h3>
+              <p className="mt-0.5 truncate text-sm text-slate-500">{offer.location} · {offer.employment_type}</p>
+              <p className="mt-0.5 line-clamp-1 text-sm text-slate-400">{offer.description}</p>
+            </div>
+            <button onClick={() => togglePublished(offer)} className={`flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${offer.published ? 'bg-lime-100 text-lime-800' : 'bg-slate-100 text-slate-500'}`}>
+              {offer.published ? 'Activa' : 'Inactiva'}
+            </button>
+            <button onClick={() => { setEditingOffer(offer); setShowForm(true); }} className="flex-shrink-0 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
+              Editar
+            </button>
+            <button onClick={async () => { if (confirm(`¿Eliminar la oferta "${offer.title}"?`)) { await deleteJobOffer(offer.id); await refresh(); } }} className="flex-shrink-0 rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:border-red-400 hover:text-red-600" aria-label="Eliminar">
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {showForm && (
+        <JobOfferForm
+          offer={editingOffer}
+          onClose={() => setShowForm(false)}
+          onSaved={async () => { setShowForm(false); await refresh(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function JobOfferForm({ offer, onClose, onSaved }: { offer: ApeJobOffer | null; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(offer?.title ?? '');
+  const [description, setDescription] = useState(offer?.description ?? '');
+  const [location, setLocation] = useState(offer?.location ?? 'Canarias');
+  const [employmentType, setEmploymentType] = useState(offer?.employment_type ?? 'Jornada completa');
+  const [imageUrl, setImageUrl] = useState(offer?.image_url ?? '');
+  const [published, setPublished] = useState(offer?.published ?? true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      const input = { title, description, location, employment_type: employmentType, image_url: imageUrl, published };
+      if (offer) await updateJobOffer(offer.id, input);
+      else await createJobOffer(input);
+      await onSaved();
+    } catch { setError('No se pudo guardar la oferta.'); } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title={offer ? 'Editar oferta' : 'Nueva oferta de empleo'} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label="Puesto">
+          <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Gerocultor/a" className={inputClass} />
+        </Field>
+        <Field label="Descripción">
+          <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tareas y responsabilidades del puesto" className={`${inputClass} min-h-28`} />
+        </Field>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Ubicación">
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ej: Santa Cruz de Tenerife" className={inputClass} />
+          </Field>
+          <Field label="Tipo de jornada">
+            <select value={employmentType} onChange={(e) => setEmploymentType(e.target.value)} className={inputClass}>
+              <option value="Jornada completa">Jornada completa</option>
+              <option value="Media jornada">Media jornada</option>
+              <option value="Por horas">Por horas</option>
+              <option value="Prácticas">Prácticas</option>
+              <option value="Voluntariado">Voluntariado</option>
+            </select>
+          </Field>
+        </div>
+        <ImageInput label="Imagen de la oferta" value={imageUrl} onChange={setImageUrl} />
+        <label className="flex items-center gap-3">
+          <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="h-5 w-5 rounded border-slate-300" />
+          <span className="text-sm font-semibold">Oferta activa (visible en la web)</span>
+        </label>
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <SaveButton saving={saving} label={offer ? 'Guardar cambios' : 'Crear oferta'} />
       </form>
     </Modal>
   );

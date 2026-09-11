@@ -23,6 +23,48 @@ export async function loadApeJobOffers(): Promise<ApeJobOffer[]> {
   return (data ?? []) as ApeJobOffer[];
 }
 
+export async function fetchAllJobOffers(): Promise<ApeJobOffer[]> {
+  const { data, error } = await supabase
+    .from('ape_job_offers')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ApeJobOffer[];
+}
+
+export async function createJobOffer(input: { title: string; description: string; location?: string; employment_type?: string; image_url?: string; published?: boolean }): Promise<ApeJobOffer> {
+  const { data, error } = await supabase
+    .from('ape_job_offers')
+    .insert({
+      title: input.title,
+      description: input.description,
+      location: input.location || 'Canarias',
+      employment_type: input.employment_type || 'Jornada completa',
+      image_url: input.image_url || '',
+      published: input.published ?? true,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ApeJobOffer;
+}
+
+export async function updateJobOffer(id: string, input: Partial<{ title: string; description: string; location: string; employment_type: string; image_url: string; published: boolean }>): Promise<void> {
+  const { error } = await supabase
+    .from('ape_job_offers')
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteJobOffer(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('ape_job_offers')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
 export async function submitApeJobApplication(
   offerId: string,
   candidateName: string,
