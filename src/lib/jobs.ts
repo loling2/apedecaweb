@@ -7,6 +7,7 @@ export type ApeJobOffer = {
   location: string;
   employment_type: string;
   image_url: string;
+  long_description: string | null;
   published: boolean;
   created_at: string;
   updated_at: string;
@@ -23,6 +24,17 @@ export async function loadApeJobOffers(): Promise<ApeJobOffer[]> {
   return (data ?? []) as ApeJobOffer[];
 }
 
+export async function loadJobOfferById(id: string): Promise<ApeJobOffer | null> {
+  const { data, error } = await supabase
+    .from('ape_job_offers')
+    .select('*')
+    .eq('id', id)
+    .eq('published', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ApeJobOffer | null;
+}
+
 export async function fetchAllJobOffers(): Promise<ApeJobOffer[]> {
   const { data, error } = await supabase
     .from('ape_job_offers')
@@ -32,7 +44,7 @@ export async function fetchAllJobOffers(): Promise<ApeJobOffer[]> {
   return (data ?? []) as ApeJobOffer[];
 }
 
-export async function createJobOffer(input: { title: string; description: string; location?: string; employment_type?: string; image_url?: string; published?: boolean }): Promise<ApeJobOffer> {
+export async function createJobOffer(input: { title: string; description: string; location?: string; employment_type?: string; image_url?: string; long_description?: string | null; published?: boolean }): Promise<ApeJobOffer> {
   const { data, error } = await supabase
     .from('ape_job_offers')
     .insert({
@@ -41,6 +53,7 @@ export async function createJobOffer(input: { title: string; description: string
       location: input.location || 'Canarias',
       employment_type: input.employment_type || 'Jornada completa',
       image_url: input.image_url || '',
+      long_description: input.long_description ?? null,
       published: input.published ?? true,
     })
     .select()
@@ -49,7 +62,7 @@ export async function createJobOffer(input: { title: string; description: string
   return data as ApeJobOffer;
 }
 
-export async function updateJobOffer(id: string, input: Partial<{ title: string; description: string; location: string; employment_type: string; image_url: string; published: boolean }>): Promise<void> {
+export async function updateJobOffer(id: string, input: Partial<{ title: string; description: string; location: string; employment_type: string; image_url: string; long_description: string | null; published: boolean }>): Promise<void> {
   const { error } = await supabase
     .from('ape_job_offers')
     .update({ ...input, updated_at: new Date().toISOString() })

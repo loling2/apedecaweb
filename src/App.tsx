@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-import { loadApeJobOffers, submitApeJobApplication, type ApeJobOffer } from '@/lib/jobs';
+import { loadApeJobOffers, loadJobOfferById, submitApeJobApplication, type ApeJobOffer } from '@/lib/jobs';
 import {
   fetchPageBySlug,
   fetchBlocks,
@@ -166,6 +166,8 @@ function App() {
         sessionEmail ? <CmsPanel userEmail={sessionEmail} onClose={() => navigate('/')} /> : <AdminLogin onClose={() => navigate('/')} />
       ) : currentPath === '/trabaja-con-nosotros' ? (
         <JobsPage />
+      ) : currentPath.startsWith('/oferta/') ? (
+        <JobDetailPage offerId={currentPath.replace('/oferta/', '')} />
       ) : currentPath === '/proyectos-recientes' ? (
         <RecentProjectsPage />
       ) : currentPath === '/historial-de-proyectos' ? (
@@ -1491,7 +1493,6 @@ function ArchivedProjectsPage() {
 
 function JobsPage() {
   const [offers, setOffers] = useState<ApeJobOffer[]>([]);
-  const [selectedOffer, setSelectedOffer] = useState<ApeJobOffer | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
@@ -1506,14 +1507,14 @@ function JobsPage() {
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <p className="text-sm font-bold uppercase tracking-[.28em] text-sky-600">Únete a nuestro equipo</p>
           <h1 className="mt-4 text-4xl font-light text-slate-900 sm:text-5xl">Ofertas <span className="text-lime-600">activas</span></h1>
-          <p className="mt-5 leading-8 text-slate-600">Buscamos personas comprometidas con el cuidado, la autonomía y el bienestar de nuestra comunidad.</p>
+          <p className="mt-5 leading-8 text-slate-600">Buscamos personas comprometidas con el cuidado, la autonomía y el bienestar de nuestra comunidad. Pulsa en una oferta para ver todos los detalles.</p>
         </div>
         {loading && <p className="py-16 text-center text-slate-500">Cargando ofertas…</p>}
         {loadError && <p className="rounded-lg bg-amber-50 p-5 text-center text-amber-900">No se han podido cargar las ofertas ahora mismo.</p>}
         {!loading && !loadError && offers.length === 0 && <p className="py-16 text-center text-slate-500">No hay ofertas activas en este momento.</p>}
         <div className="grid gap-8 md:grid-cols-2">
           {offers.map((offer) => (
-            <article key={offer.id} className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+            <article key={offer.id} className="group cursor-pointer overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl" onClick={() => navigate(`/oferta/${offer.id}`)}>
               <img src={offer.image_url} alt="" className="h-56 w-full object-cover" />
               <div className="p-7">
                 <div className="flex flex-wrap gap-2 text-xs font-semibold text-sky-700">
@@ -1522,13 +1523,88 @@ function JobsPage() {
                 </div>
                 <h2 className="mt-5 text-2xl font-semibold text-slate-900">{offer.title}</h2>
                 <p className="mt-3 leading-7 text-slate-600">{offer.description}</p>
-                <button onClick={() => setSelectedOffer(offer)} className="mt-6 inline-flex items-center gap-2 rounded bg-sky-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-sky-400"><Briefcase size={17} /> Solicitar oferta</button>
+                <span className="mt-6 inline-flex items-center gap-2 font-semibold text-sky-600 transition group-hover:gap-3">Ver detalles <ArrowRight size={17} /></span>
               </div>
             </article>
           ))}
         </div>
       </section>
-      {selectedOffer && <ApplicationModal offer={selectedOffer} onClose={() => setSelectedOffer(null)} />}
+    </main>
+  );
+}
+
+function JobDetailPage({ offerId }: { offerId: string }) {
+  const [offer, setOffer] = useState<ApeJobOffer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [showApplication, setShowApplication] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setNotFound(false);
+    loadJobOfferById(offerId)
+      .then((data) => { if (active) { if (data) setOffer(data); else setNotFound(true); } })
+      .catch(() => { if (active) setNotFound(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [offerId]);
+
+  if (loading) return <div className="flex min-h-[60vh] items-center justify-center text-slate-400">Cargando oferta…</div>;
+  if (notFound || !offer) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-24 text-center">
+        <h1 className="text-3xl font-light text-slate-900">Oferta no encontrada</h1>
+        <p className="mt-4 text-slate-500">Es posible que la oferta ya no esté disponible.</p>
+        <button onClick={() => navigate('/trabaja-con-nosotros')} className="mt-8 rounded bg-sky-500 px-6 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Ver todas las ofertas</button>
+      </main>
+    );
+  }
+
+  const longDescriptionLines = offer.long_description
+    ? offer.long_description.split('\n').map((l) => l.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <main className="bg-slate-50">
+      <PageBanner title={offer.title.toUpperCase()} image={offer.image_url || 'https://images.pexels.com/photos/3768131/pexels-photo-3768131.jpeg?auto=compress&cs=tinysrgb&w=1600'} />
+      <section className="mx-auto max-w-4xl px-5 py-16 sm:px-8">
+        <button onClick={() => navigate('/trabaja-con-nosotros')} className="mb-8 flex items-center gap-2 text-sm font-semibold text-sky-600 transition hover:gap-3">
+          <ArrowRight size={16} className="rotate-180" /> Volver a ofertas
+        </button>
+
+        <div className="rounded-xl bg-white p-8 shadow-sm sm:p-10">
+          <div className="flex flex-wrap gap-2 text-xs font-semibold text-sky-700">
+            <span className="rounded-full bg-sky-50 px-3 py-1"><MapPin size={13} className="mr-1 inline" />{offer.location}</span>
+            <span className="rounded-full bg-lime-100 px-3 py-1"><Clock3 size={13} className="mr-1 inline" />{offer.employment_type}</span>
+          </div>
+
+          <h1 className="mt-5 text-4xl font-light text-slate-900">{offer.title}</h1>
+          <p className="mt-4 text-lg leading-8 text-slate-600">{offer.description}</p>
+
+          {offer.long_description && (
+            <div className="mt-8 border-t border-slate-100 pt-8">
+              <h2 className="text-xl font-semibold text-slate-900">Descripción del puesto</h2>
+              <ul className="mt-5 space-y-3 leading-8 text-slate-600">
+                {longDescriptionLines.map((line, i) => (
+                  <li key={i} className="flex gap-3">
+                    <Check size={20} className="mt-1 flex-shrink-0 text-lime-600" />
+                    <span>{line.trim()}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="mt-10 border-t border-slate-100 pt-8">
+            <button onClick={() => setShowApplication(true)} className="inline-flex items-center gap-2 rounded bg-sky-500 px-6 py-3.5 font-semibold text-slate-950 transition hover:bg-sky-400">
+              <Briefcase size={18} /> Solicitar esta oferta
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {showApplication && <ApplicationModal offer={offer} onClose={() => setShowApplication(false)} />}
     </main>
   );
 }

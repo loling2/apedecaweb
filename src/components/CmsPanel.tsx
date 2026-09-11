@@ -1128,6 +1128,7 @@ function JobOfferForm({ offer, onClose, onSaved }: { offer: ApeJobOffer | null; 
   const [location, setLocation] = useState(offer?.location ?? 'Canarias');
   const [employmentType, setEmploymentType] = useState(offer?.employment_type ?? 'Jornada completa');
   const [imageUrl, setImageUrl] = useState(offer?.image_url ?? '');
+  const [longDescription, setLongDescription] = useState(offer?.long_description ?? '');
   const [published, setPublished] = useState(offer?.published ?? true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -1136,7 +1137,7 @@ function JobOfferForm({ offer, onClose, onSaved }: { offer: ApeJobOffer | null; 
     e.preventDefault();
     setSaving(true); setError('');
     try {
-      const input = { title, description, location, employment_type: employmentType, image_url: imageUrl, published };
+      const input = { title, description, location, employment_type: employmentType, image_url: imageUrl, long_description: longDescription || null, published };
       if (offer) await updateJobOffer(offer.id, input);
       else await createJobOffer(input);
       await onSaved();
@@ -1149,8 +1150,11 @@ function JobOfferForm({ offer, onClose, onSaved }: { offer: ApeJobOffer | null; 
         <Field label="Puesto">
           <input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ej: Gerocultor/a" className={inputClass} />
         </Field>
-        <Field label="Descripción">
-          <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tareas y responsabilidades del puesto" className={`${inputClass} min-h-28`} />
+        <Field label="Descripción breve">
+          <textarea required value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Resumen corto que aparece en la tarjeta de la oferta" className={`${inputClass} min-h-20`} />
+        </Field>
+        <Field label="Descripción detallada del puesto">
+          <textarea value={longDescription} onChange={(e) => setLongDescription(e.target.value)} placeholder="Escribe cada función o requisito en una línea. Aparecerá como lista en la página de detalle de la oferta." className={`${inputClass} min-h-40`} />
         </Field>
         <div className="grid grid-cols-2 gap-4">
           <Field label="Ubicación">
