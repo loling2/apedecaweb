@@ -271,9 +271,9 @@ function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { n
           </div>
           <button onClick={() => onNavigate('/')} className="group flex items-center gap-2" aria-label="Apedeca inicio">
             {settings?.logo_url ? (
-              <img src={settings.logo_url} alt={settings.site_name} className="h-14 w-auto" />
+              <img src={settings.logo_url} alt={settings.site_name} className="h-16 w-auto sm:h-[4.5rem]" />
             ) : (
-              <span className="relative flex h-14 w-16 items-center justify-center">
+              <span className="relative flex h-16 w-20 items-center justify-center sm:h-[4.5rem] sm:w-24">
                 <span className="absolute h-8 w-14 -rotate-12 rounded-[55%] bg-lime-400" />
                 <span className="absolute h-8 w-14 rotate-12 rounded-[55%] bg-sky-600" />
                 <span className="relative z-10 text-lg font-black italic tracking-tighter text-sky-700">{settings?.site_name ?? 'Apedeca'}</span>
