@@ -345,8 +345,7 @@ function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { n
             )}
           </button>
           <div className="flex flex-col items-end leading-tight">
-            <button onClick={() => onNavigate('/canal-de-denuncias')} className="text-[11px] font-semibold text-sky-600 transition hover:text-sky-800 sm:text-sm">Canal de Denuncias</button>
-            <a href="tel:922075545" className="mt-1 flex items-center gap-1 text-[11px] text-sky-500 transition hover:text-sky-700 sm:text-sm"><Phone size={13} /> 922.075.545</a>
+            <button onClick={() => onNavigate('/canal-de-denuncias')} className="rounded bg-sky-600 px-4 py-2 text-[11px] font-semibold text-white shadow-sm transition hover:bg-sky-700 sm:text-sm">Canal de Denuncias</button>
           </div>
           <button onClick={() => setMenuOpen(!menuOpen)} className="rounded p-2 text-slate-700 md:hidden" aria-label="Abrir menú">{menuOpen ? <X /> : <Menu />}</button>
         </div>
