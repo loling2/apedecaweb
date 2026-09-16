@@ -4,7 +4,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-// Wasabi S3 storage proxy — credentials v2
+// Wasabi S3 storage proxy — credentials from environment variables
 
 async function sha256Hex(data: string | Uint8Array): Promise<string> {
   const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data;

@@ -112,9 +112,9 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
         </div>
       </aside>
 
-      <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between bg-slate-900 px-4 py-3 text-white sm:hidden">
-        <span className="text-sm font-semibold">CMS Apedeca</span>
-        <div className="flex gap-2">
+      <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between gap-2 bg-slate-900 px-4 py-3 text-white sm:hidden">
+        <span className="flex-shrink-0 text-sm font-semibold">CMS</span>
+        <div className="flex flex-wrap justify-end gap-1.5">
           {(['pages', 'projects', 'jobs', 'transparency', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded px-3 py-1.5 text-xs ${tab === t ? 'bg-sky-500' : 'bg-slate-800'}`}>
               {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'jobs' ? 'Empleo' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
@@ -182,7 +182,7 @@ function PagesTab() {
 
       <div className="mt-8 space-y-3">
         {pages.map((page) => (
-          <div key={page.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+          <div key={page.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
             {page.banner_image ? (
               <img src={page.banner_image} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg object-cover" />
             ) : (
@@ -328,7 +328,7 @@ function BlockEditor({ page, onBack }: { page: CmsPage; onBack: () => void }) {
           {blocks.length === 0 && <p className="py-10 text-center text-slate-400">Esta página no tiene bloques todavía. Crea el primero con "Nuevo bloque".</p>}
           {blocks.map((block, idx) => (
             <div key={block.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-wrap items-start gap-4">
                 <div className="flex flex-col gap-1 pt-1">
                   <button onClick={() => moveBlock(block, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Subir"><ChevronUp size={18} /></button>
                   <button onClick={() => moveBlock(block, 1)} disabled={idx === blocks.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Bajar"><ChevronDown size={18} /></button>
@@ -603,7 +603,7 @@ function ProjectsTab() {
         ) : (
           <div className="space-y-3">
             {activeProjects.map((project, idx) => (
-              <div key={project.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={project.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-0.5">
                   <button onClick={() => moveProject(project, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronUp size={16} /></button>
                   <button onClick={() => moveProject(project, 1)} disabled={idx === activeProjects.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronDown size={16} /></button>
@@ -642,7 +642,7 @@ function ProjectsTab() {
         ) : (
           <div className="space-y-3">
             {archivedProjects.map((project) => (
-              <div key={project.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={project.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 {project.image_url ? (
                   <img src={project.image_url} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg object-cover" />
                 ) : (
@@ -718,7 +718,7 @@ function ProjectForm({ project, nextOrder, onClose, onSaved }: { project: ApePro
         <Field label="Año (opcional)">
           <input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Ej: 2025" className={inputClass} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Fecha de inicio">
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputClass} />
           </Field>
@@ -802,7 +802,7 @@ function TransparencyTab() {
 
       <div className="mt-8 space-y-3">
         {sections.map((section, idx) => (
-          <div key={section.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={section.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col gap-0.5">
               <button onClick={() => moveSection(section, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronUp size={16} /></button>
               <button onClick={() => moveSection(section, 1)} disabled={idx === sections.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30"><ChevronDown size={16} /></button>
@@ -923,7 +923,7 @@ function TransparencyItemsEditor({ section, onBack }: { section: TransparencySec
           {items.length === 0 && <p className="py-10 text-center text-slate-400">Este apartado no tiene líneas todavía. Crea la primera con "Nueva línea".</p>}
           {items.map((item, idx) => (
             <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-start gap-4">
+              <div className="flex flex-wrap items-start gap-4">
                 <div className="flex flex-col gap-1 pt-1">
                   <button onClick={() => moveItem(item, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Subir"><ChevronUp size={18} /></button>
                   <button onClick={() => moveItem(item, 1)} disabled={idx === items.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Bajar"><ChevronDown size={18} /></button>
@@ -1095,7 +1095,7 @@ function JobsTab() {
       <div className="mt-8 space-y-3">
         {offers.length === 0 && <p className="py-10 text-center text-slate-400">No hay ofertas todavía. Crea la primera con "Nueva oferta".</p>}
         {offers.map((offer) => (
-          <div key={offer.id} className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={offer.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             {offer.image_url ? (
               <img src={offer.image_url} alt="" className="h-14 w-20 flex-shrink-0 rounded-lg object-cover" />
             ) : (
@@ -1164,7 +1164,7 @@ function JobOfferForm({ offer, onClose, onSaved }: { offer: ApeJobOffer | null; 
         <Field label="Descripción detallada del puesto">
           <textarea value={longDescription} onChange={(e) => setLongDescription(e.target.value)} placeholder="Escribe cada función o requisito en una línea. Aparecerá como lista en la página de detalle de la oferta." className={`${inputClass} min-h-40`} />
         </Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Ubicación">
             <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ej: Santa Cruz de Tenerife" className={inputClass} />
           </Field>
@@ -1539,12 +1539,12 @@ function SettingsTab() {
       <form onSubmit={submit} className="mt-6 space-y-6">
         <ImageInput label="Logo del sitio" value={settings.logo_url ?? ''} onChange={(v) => setSettings({ ...settings, logo_url: v })} />
         <Field label="Nombre del sitio"><input value={settings.site_name} onChange={(e) => setSettings({ ...settings, site_name: e.target.value })} className={inputClass} /></Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Teléfono"><input value={settings.phone ?? ''} onChange={(e) => setSettings({ ...settings, phone: e.target.value })} className={inputClass} /></Field>
           <Field label="Email"><input value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={inputClass} /></Field>
         </div>
         <Field label="Dirección"><input value={settings.address ?? ''} onChange={(e) => setSettings({ ...settings, address: e.target.value })} className={inputClass} /></Field>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="URL Facebook"><input value={settings.facebook_url ?? ''} onChange={(e) => setSettings({ ...settings, facebook_url: e.target.value })} className={inputClass} /></Field>
           <Field label="URL Instagram"><input value={settings.instagram_url ?? ''} onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })} className={inputClass} /></Field>
           <Field label="URL LinkedIn"><input value={settings.linkedin_url ?? ''} onChange={(e) => setSettings({ ...settings, linkedin_url: e.target.value })} className={inputClass} /></Field>
