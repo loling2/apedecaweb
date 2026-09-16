@@ -23,10 +23,10 @@ function hex(bytes: Uint8Array): string {
 }
 
 function getConfig(): { accessKey: string; secretKey: string; bucket: string; endpoint: string; host: string; region: string } {
-  const accessKey = "463244LR5DNM7LTWYBP8";
-  const secretKey = "z00eiHTuOzYFFzeZk33QgO5d312eDBP49XZWFCzn";
-  const bucket = "apedecadocumentos";
-  const endpoint = "https://s3.eu-central-2.wasabisys.com";
+  const accessKey = Deno.env.get("WASABI_ACCESS_KEY") ?? "";
+  const secretKey = Deno.env.get("WASABI_SECRET_KEY") ?? "";
+  const bucket = Deno.env.get("WASABI_BUCKET") ?? "apedecadocumentos";
+  const endpoint = Deno.env.get("WASABI_ENDPOINT") ?? "https://s3.eu-central-2.wasabisys.com";
   const endpointUrl = new URL(endpoint);
   return { accessKey, secretKey, bucket, endpoint, host: endpointUrl.host, region: "eu-central-2" };
 }

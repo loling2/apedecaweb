@@ -506,7 +506,7 @@ function HeroBlock({ block }: { block: CmsBlock }) {
   return (
     <section id="inicio" className="relative flex min-h-[560px] items-center overflow-hidden bg-slate-800" style={block.image_url ? { backgroundImage: `linear-gradient(90deg, rgba(7,22,35,.8), rgba(7,22,35,.5)), url(${block.image_url})`, backgroundPosition: 'center', backgroundSize: 'cover' } : {}}>
       <div className="mx-auto w-full max-w-5xl px-6 py-24 text-center text-white">
-        {block.title && <h1 className="text-6xl font-light tracking-tight sm:text-8xl">{block.title}</h1>}
+        {block.title && <h1 className="text-4xl font-light tracking-tight sm:text-6xl lg:text-8xl">{block.title}</h1>}
         {block.body && <p className="mx-auto mt-5 max-w-3xl text-xl font-light leading-relaxed sm:text-2xl">{block.body}</p>}
         <button onClick={() => document.getElementById('historia')?.scrollIntoView({ behavior: 'smooth' })} className="mt-9 inline-flex items-center gap-3 rounded bg-lime-100 px-8 py-4 font-semibold text-slate-900 transition hover:-translate-y-1 hover:bg-white">Conócenos <ArrowRight size={18} /></button>
       </div>
@@ -620,7 +620,7 @@ function AccordionBlock({ block }: { block: CmsBlock }) {
             <button onClick={() => setOpenIndex(openIndex === index ? -1 : index)} className={`flex w-full items-center gap-4 px-6 py-5 text-left text-xl font-semibold ${index === 1 ? 'bg-sky-500 text-white' : 'bg-lime-300 text-sky-600'}`}>
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-500 text-white">{openIndex === index ? '−' : '+'}</span>{item.title}
             </button>
-            {openIndex === index && <ul className="space-y-4 bg-lime-50 px-12 py-6 text-lg leading-8 text-slate-800">{item.points.map((point) => <li key={point} className="list-disc">{point}</li>)}</ul>}
+            {openIndex === index && <ul className="space-y-4 bg-lime-50 px-6 py-6 text-lg leading-8 text-slate-800 sm:px-12">{item.points.map((point) => <li key={point} className="list-disc">{point}</li>)}</ul>}
           </div>
         ))}
       </div>
@@ -654,7 +654,7 @@ function ProjectLogo({ url, className }: { url: string; className?: string }) {
     return <img src={url} alt="" className={`${className ?? ''} drop-shadow-lg`} />;
   }
   return (
-    <div className="flex h-24 w-56 items-center justify-center overflow-hidden rounded-lg bg-white/95 shadow-lg backdrop-blur-sm sm:h-28 sm:w-64">
+    <div className="flex h-16 w-36 items-center justify-center overflow-hidden rounded-lg bg-white/95 shadow-lg backdrop-blur-sm sm:h-24 sm:w-56 lg:h-28 lg:w-64">
       <img src={url} alt="" className="h-full w-full object-contain" />
     </div>
   );
@@ -715,7 +715,7 @@ function ProjectsSliderSection() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <ProjectLogo url={project.logo_url} className="h-24 w-56 sm:h-28 sm:w-64" />
+                        <ProjectLogo url={project.logo_url} className="h-16 w-36 sm:h-24 sm:w-56 lg:h-28 lg:w-64" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-12">
@@ -998,7 +998,7 @@ function ContactBlock() {
 function PageBanner({ title, image }: { title: string; image: string | null }) {
   return (
     <section className="relative flex h-64 items-center justify-center overflow-hidden bg-sky-700" style={image ? { backgroundImage: `linear-gradient(90deg, rgba(15,23,42,.28), rgba(15,23,42,.18)), url(${image})`, backgroundPosition: 'center', backgroundSize: 'cover' } : undefined}>
-      <h1 className="relative text-5xl font-light tracking-wide text-white sm:text-7xl">{title}</h1>
+      <h1 className="relative text-3xl font-light tracking-wide text-white sm:text-5xl lg:text-7xl">{title}</h1>
     </section>
   );
 }
@@ -1476,7 +1476,7 @@ function RecentProjectsPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent" />
                     {project.logo_url && (
                       <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
-                        <ProjectLogo url={project.logo_url} className="h-24 w-56 sm:h-28 sm:w-64" />
+                        <ProjectLogo url={project.logo_url} className="h-16 w-36 sm:h-24 sm:w-56 lg:h-28 lg:w-64" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 p-8 sm:p-14">
@@ -1807,11 +1807,11 @@ function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: 
       </div>
       <div className="border-t border-sky-800">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-5 text-xs text-sky-300 sm:flex-row lg:px-10">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <p>Copyright © {year} {settings?.site_name ?? 'Apedeca'} · Todos los derechos reservados</p>
             <button onClick={onAdminAccess} className="rounded p-1 text-sky-300 transition hover:bg-sky-800 hover:text-white" aria-label="Acceso privado" title="Acceso privado"><LockKeyhole size={15} /></button>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => onNavigate('/aviso-legal')} className="transition hover:text-white">Aviso legal</button>
             <button onClick={() => onNavigate('/politica-privacidad')} className="transition hover:text-white">Privacidad</button>
             <button onClick={() => onNavigate('/politica-cookies')} className="transition hover:text-white">Cookies</button>
