@@ -198,7 +198,7 @@ export default function DenunciaFormPage({ onBack }: DenunciaFormPageProps) {
             )}
 
             <div className="space-y-4 border-t border-slate-200 pt-7">
-              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="#condiciones" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
+              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="/condiciones-uso-denuncias" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
             </div>
             <button type="submit" disabled={!values.communicationType || !acceptedProvider} className="inline-flex items-center gap-2 rounded bg-orange-500 px-7 py-3.5 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">CONTINUAR <ArrowRight size={17} /></button>
           </form>
@@ -218,7 +218,7 @@ export default function DenunciaFormPage({ onBack }: DenunciaFormPageProps) {
             <div className="space-y-5 border-t border-slate-200 pt-7">
               <p className="leading-7 text-slate-600">Consulta la <a href="/politica-privacidad" className="font-semibold text-orange-600 underline underline-offset-4">política de privacidad del canal de denuncias</a> antes de continuar.</p>
               <Consent checked={acceptedPrivacy} onChange={setAcceptedPrivacy}>He leído y acepto la política de privacidad del canal de denuncias de <strong>SERVICIOS Y GESTION RESIDENCIAL EN CANARIAS, S.L. - GERONTALIA, S.L. - ASOCIACIÓN DE AYUDA A PERSONAS CON DEPENDENCIA EN CANARIAS</strong>. <a href="/politica-privacidad" className="font-semibold text-orange-600 underline underline-offset-4">Ver aquí</a>.</Consent>
-              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="#condiciones" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
+              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="/condiciones-uso-denuncias" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
             </div>
             <button type="submit" disabled={!acceptedPrivacy || !acceptedProvider} className="rounded bg-orange-500 px-7 py-3.5 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">ENVIAR {values.communicationType === 'consulta' ? 'CONSULTA' : 'DENUNCIA'}</button>
           </form>
