@@ -518,10 +518,36 @@ function HeroBlock({ block }: { block: CmsBlock }) {
   );
 }
 
+function renderFormattedBody(body: string) {
+  const paragraphs = body.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  return paragraphs.map((para, idx) => {
+    const boldMatch = para.match(/^\*\*(.+)\*\*$/);
+    if (boldMatch) {
+      return <h3 key={idx} className="mt-8 mb-3 text-lg font-bold text-slate-900 first:mt-0">{boldMatch[1]}</h3>;
+    }
+    const lines = para.split('\n');
+    const isBulletList = lines.every((l) => l.trim().startsWith('•'));
+    if (isBulletList) {
+      return (
+        <ul key={idx} className="mt-4 mb-4 space-y-2 pl-1">
+          {lines.map((line, i) => (
+            <li key={i} className="flex gap-3 leading-8 text-slate-600">
+              <span className="mt-0.5 shrink-0 text-sky-500">•</span>
+              <span>{line.trim().replace(/^•\s*/, '')}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    return <p key={idx} className="mt-4 mb-4 leading-8 text-slate-600">{para}</p>;
+  });
+}
+
 function TextBlock({ block }: { block: CmsBlock }) {
   const titleWords = (block.title ?? '').split(' ');
   const titleStart = titleWords.shift();
   const titleAccent = titleWords.join(' ');
+  const hasFormattedBody = block.body?.includes('**') || block.body?.includes('\n•');
 
   return (
     <section id="historia" className="mx-auto grid max-w-6xl gap-14 px-6 py-20 lg:grid-cols-2 lg:items-center lg:px-10 lg:gap-20">
@@ -534,7 +560,14 @@ function TextBlock({ block }: { block: CmsBlock }) {
             </h2>
           </>
         )}
-        {block.body && <p className="mt-8 whitespace-pre-line text-lg leading-9 text-slate-600">{block.body}</p>}
+        {block.body && hasFormattedBody && (
+          <div className="mt-8 text-base leading-8 text-slate-600">
+            {renderFormattedBody(block.body)}
+          </div>
+        )}
+        {block.body && !hasFormattedBody && (
+          <p className="mt-8 whitespace-pre-line text-lg leading-9 text-slate-600">{block.body}</p>
+        )}
       </div>
       {block.image_url && (
         <div className="relative lg:mt-10">
