@@ -1943,7 +1943,7 @@ function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: 
             <ul className="space-y-3 text-sm text-sky-200">
               {settings?.email && <li><a href={`mailto:${settings.email}`} className="flex items-center gap-2 transition hover:text-white"><Mail size={15} /> {settings.email}</a></li>}
               {settings?.phone && <li><a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="flex items-center gap-2 transition hover:text-white"><Phone size={15} /> {settings.phone}</a></li>}
-              {settings?.address && <li><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`} target="_blank" rel="noreferrer" className="flex items-start gap-2 transition hover:text-white"><MapPin size={15} className="mt-0.5 shrink-0" /> <span>{settings.address}</span></a></li>}
+              {settings?.address && <li><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Desiré Dugour, 8, S/C de Tenerife - Santa Cruz de Tenerife')}`} target="_blank" rel="noreferrer" className="flex items-start gap-2 transition hover:text-white"><MapPin size={15} className="mt-0.5 shrink-0" /> <span>{settings.address}</span></a></li>}
             </ul>
           </div>
         </div>
