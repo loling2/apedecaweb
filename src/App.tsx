@@ -190,8 +190,71 @@ function App() {
       {currentPath !== '/admin' && <Footer navItems={navItems} settings={settings} footerLinks={footerLinks} onNavigate={navigate} onAdminAccess={() => sessionEmail ? navigate('/admin') : setAuthOpen(true)} />}
       {currentPath !== '/admin' && <AccessibilityWidget open={accessibilityOpen} setOpen={setAccessibilityOpen} />}
       {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
+      <CookieConsentBanner onNavigate={navigate} />
       {loadingContent && <div className="fixed bottom-5 left-5 rounded-full bg-slate-900 px-4 py-2 text-xs text-white shadow-lg">Conectando contenido…</div>}
       {contentError && <div className="fixed bottom-5 left-5 rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-900 shadow-lg">{contentError}</div>}
+    </div>
+  );
+}
+
+const COOKIE_CONSENT_KEY = 'apedeca-cookie-consent';
+
+function CookieConsentBanner({ onNavigate }: { onNavigate: (href: string) => void }) {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (!stored) {
+      document.body.style.overflow = 'hidden';
+      setShow(true);
+    }
+  }, []);
+
+  function handleChoice(choice: 'accepted' | 'rejected') {
+    window.localStorage.setItem(COOKIE_CONSENT_KEY, choice);
+    document.body.style.overflow = '';
+    setShow(false);
+  }
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-2xl rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl sm:p-8">
+        <div className="flex items-start gap-4">
+          <div className="hidden shrink-0 sm:block">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-600">
+              <FileText size={26} />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-slate-900">Uso de cookies</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Esta web utiliza cookies propias y de terceros para mejorar tu experiencia de navegación, recordar tus preferencias y obtener información estadística sobre el uso del sitio. Puedes aceptar todas, rechazar las no esenciales o consultar nuestra política de cookies para más información.
+            </p>
+            <button
+              onClick={() => onNavigate('/politica-cookies')}
+              className="mt-2 text-sm font-medium text-sky-600 underline transition hover:text-sky-800"
+            >
+              Consultar la política de cookies
+            </button>
+          </div>
+        </div>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+          <button
+            onClick={() => handleChoice('rejected')}
+            className="rounded-lg border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+          >
+            Rechazar cookies no esenciales
+          </button>
+          <button
+            onClick={() => handleChoice('accepted')}
+            className="rounded-lg bg-sky-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-sky-400"
+          >
+            Aceptar todas las cookies
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
