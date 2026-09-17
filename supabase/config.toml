@@ -1,3 +1,7 @@
 [functions.wasabi-storage]
 verify_jwt = false
 entrypoint = "./functions/wasabi-storage/index.ts"
+
+[functions.send-contact-email]
+verify_jwt = false
+entrypoint = "./functions/send-contact-email/index.ts"

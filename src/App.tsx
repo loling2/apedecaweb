@@ -72,6 +72,7 @@ import {
 } from '@/lib/cms';
 import CmsPanel from '@/components/CmsPanel';
 import DenunciaFormPage from '@/components/DenunciaFormPage';
+import ContactPage from '@/components/ContactPage';
 import { hasSupabaseConfig } from '@/lib/supabase';
 import { fallbackNavItems, fallbackSettings, fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
 
@@ -181,6 +182,8 @@ function App() {
         <TransparencyPage />
       ) : currentPath === '/formulario-denuncias' ? (
         <DenunciaFormPage onBack={() => navigate('/canal-de-denuncias')} onNavigate={navigate} />
+      ) : currentPath === '/contacto' ? (
+        <ContactPage onBack={() => navigate('/')} settings={settings} />
       ) : (
         <DynamicPage slug={slug} />
       )}
@@ -1799,7 +1802,7 @@ function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: 
             <ul className="space-y-3 text-sm text-sky-200">
               {settings?.email && <li><a href={`mailto:${settings.email}`} className="flex items-center gap-2 transition hover:text-white"><Mail size={15} /> {settings.email}</a></li>}
               {settings?.phone && <li><a href={`tel:${settings.phone.replace(/\s/g, '')}`} className="flex items-center gap-2 transition hover:text-white"><Phone size={15} /> {settings.phone}</a></li>}
-              {settings?.address && <li className="flex items-start gap-2"><MapPin size={15} className="mt-0.5 shrink-0" /> <span>{settings.address}</span></li>}
+              {settings?.address && <li><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address)}`} target="_blank" rel="noreferrer" className="flex items-start gap-2 transition hover:text-white"><MapPin size={15} className="mt-0.5 shrink-0" /> <span>{settings.address}</span></a></li>}
             </ul>
           </div>
         </div>
