@@ -455,6 +455,8 @@ function BlockRenderer({ block, onNavigate }: { block: CmsBlock; onNavigate: (hr
       return <VolunteerProcessBlock block={block} />;
     case 'link-group':
       return <LinkGroupBlock block={block} onNavigate={onNavigate} />;
+    case 'cookie-table':
+      return <CookieTableBlock block={block} />;
     default:
       return null;
   }
@@ -625,6 +627,45 @@ function AccordionBlock({ block }: { block: CmsBlock }) {
             {openIndex === index && <ul className="space-y-4 bg-lime-50 px-6 py-6 text-lg leading-8 text-slate-800 sm:px-12">{item.points.map((point) => <li key={point} className="list-disc">{point}</li>)}</ul>}
           </div>
         ))}
+      </div>
+    </section>
+  );
+}
+
+type CookieRow = { name: string; purpose: string; type: string; duration: string; installed: string };
+
+function CookieTableBlock({ block }: { block: CmsBlock }) {
+  const cookies = parseJson<CookieRow[]>(block.body, []);
+  if (cookies.length === 0) return null;
+
+  return (
+    <section className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
+      {block.title && <h2 className="mb-8 text-center text-3xl font-light text-slate-900 sm:text-4xl">{block.title}</h2>}
+      <div className="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="bg-sky-50 text-slate-700">
+                <th className="px-5 py-4 font-semibold">Nombre</th>
+                <th className="px-5 py-4 font-semibold">Finalidad</th>
+                <th className="px-5 py-4 font-semibold whitespace-nowrap">Propia / Terceros</th>
+                <th className="px-5 py-4 font-semibold whitespace-nowrap">Duración</th>
+                <th className="px-5 py-4 font-semibold">¿Cuándo se instala?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cookies.map((c) => (
+                <tr key={c.name} className="border-t border-slate-100 align-top transition hover:bg-slate-50">
+                  <td className="px-5 py-4 font-mono font-medium text-sky-700 whitespace-nowrap">{c.name}</td>
+                  <td className="px-5 py-4 leading-6 text-slate-600">{c.purpose}</td>
+                  <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{c.type}</td>
+                  <td className="px-5 py-4 text-slate-600 whitespace-nowrap">{c.duration}</td>
+                  <td className="px-5 py-4 text-slate-600">{c.installed}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   );
