@@ -180,7 +180,7 @@ function App() {
       ) : currentPath === '/transparencia' ? (
         <TransparencyPage />
       ) : currentPath === '/formulario-denuncias' ? (
-        <DenunciaFormPage onBack={() => navigate('/canal-de-denuncias')} />
+        <DenunciaFormPage onBack={() => navigate('/canal-de-denuncias')} onNavigate={navigate} />
       ) : (
         <DynamicPage slug={slug} />
       )}
