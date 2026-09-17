@@ -360,7 +360,7 @@ function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { n
             return <button key={item.id} onClick={() => { setMenuOpen(false); onNavigate(href); }} className="py-3 text-center text-base transition hover:text-sky-600 md:py-5 text-slate-600">{item.label}</button>;
           })}
           <button onClick={() => { setMenuOpen(false); onNavigate('/trabaja-con-nosotros'); }} className="my-2 rounded bg-lime-300 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-lime-200 md:my-0 md:ml-auto">Trabaja con nosotros</button>
-          <button onClick={() => { setMenuOpen(false); onNavigate('#contacto'); }} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
+          <button onClick={() => { setMenuOpen(false); onNavigate('/contacto'); }} className="my-2 rounded bg-sky-500 px-5 py-3 text-center font-medium text-slate-950 transition hover:bg-sky-400 md:my-0">Contáctenos</button>
           {sessionEmail && <button onClick={onSignOut} className="py-3 text-xs text-slate-500 hover:text-red-600 md:py-0">Salir</button>}
         </div>
       </nav>
