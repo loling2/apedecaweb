@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, FileText, ShieldCheck, Upload } from 'lucide-react';
 
 type DenunciaFormPageProps = { onBack: () => void };
@@ -25,6 +25,12 @@ type FormValues = {
   places: string;
   period: string;
   peopleInvolved: string;
+  otherPeople: string;
+  affectedAreas: string;
+  discovery: string;
+  awareness: string;
+  concealment: string;
+  relevantDetails: string;
 };
 
 const initialValues: FormValues = {
@@ -46,6 +52,12 @@ const initialValues: FormValues = {
   places: '',
   period: '',
   peopleInvolved: '',
+  otherPeople: '',
+  affectedAreas: '',
+  discovery: '',
+  awareness: '',
+  concealment: '',
+  relevantDetails: '',
 };
 
 const inputClass = 'mt-2 w-full rounded-sm border border-slate-300 bg-[#eef5f8] px-3 py-3 text-[15px] text-slate-700 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100';
@@ -250,7 +262,73 @@ function ComplaintFields({ values, updateValue, files, setFiles }: { values: For
       <Field label="Identifique el lugar o lugares en los que han tenido o están teniendo lugar los hechos informados" required><textarea required value={values.places} onChange={(event) => updateValue('places', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
       <Field label="Describa el momento o período de tiempo durante el que han tenido lugar los hechos informados" required><textarea required value={values.period} onChange={(event) => updateValue('period', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
       <Field label="Identifique a la persona o personas implicadas en este comportamiento, y en su caso, la sociedad del grupo en la que trabajan" required><textarea required value={values.peopleInvolved} onChange={(event) => updateValue('peopleInvolved', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Identifique, si es posible, a otras personas participantes en los hechos o que tuvieran conocimiento de los mismos, y en su caso, la sociedad del grupo en que trabajan"><textarea value={values.otherPeople} onChange={(event) => updateValue('otherPeople', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Identifique las sociedades y/o áreas de negocio del Grupo afectadas o relacionadas con los hechos informados" required><textarea required value={values.affectedAreas} onChange={(event) => updateValue('affectedAreas', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Describa cómo llegaron a su conocimiento los hechos informados" required><textarea required value={values.discovery} onChange={(event) => updateValue('discovery', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="¿Está la dirección al corriente de este problema?" required>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {['No', 'No deseo revelarlo', 'No lo sé', 'Sí'].map((option) => <label key={option} className="flex items-center gap-2 text-sm text-slate-700"><input type="radio" name="awareness" value={option} checked={values.awareness === option} onChange={(event) => updateValue('awareness', event.target.value)} className="h-4 w-4 accent-orange-500" />{option}</label>)}
+        </div>
+      </Field>
+      <Field label="Identifique las personas que han intentado ocultar este problema y las medidas que adoptaron para ello"><textarea value={values.concealment} onChange={(event) => updateValue('concealment', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Proporcione todos los detalles sobre la presunta infracción, incluida la ubicación de los testigos y cualquier otra información que pudiera ser valiosa en la evaluación y posterior resolución de la situación"><textarea value={values.relevantDetails} onChange={(event) => updateValue('relevantDetails', event.target.value)} className={`${inputClass} min-h-28`} /></Field>
+      <p className="-mt-3 text-xs italic leading-5 text-slate-500">Tómese su tiempo y aporte la mayor cantidad de detalles posible, pero tenga cuidado de no dar detalles que pudieran revelar su identidad a menos que desee hacerlo. Podría ser importante saber si usted es la única persona consciente de esta situación.</p>
       <FilePicker files={files} onChange={setFiles} />
+      <VoiceRecorder />
+    </div>
+  );
+}
+
+function VoiceRecorder() {
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+  }, [audioUrl]);
+
+  async function toggleRecording() {
+    if (recording) {
+      recorderRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    setError('');
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('Este navegador no permite grabar audio. Puedes adjuntar un archivo de audio.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      chunksRef.current = [];
+      recorder.ondataavailable = (event: BlobEvent) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
+      recorder.onstop = () => {
+        const nextUrl = URL.createObjectURL(new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' }));
+        setAudioUrl((current) => { if (current) URL.revokeObjectURL(current); return nextUrl; });
+        stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      };
+      recorderRef.current = recorder;
+      streamRef.current = stream;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setError('No se ha podido acceder al micrófono. Revisa el permiso del navegador.');
+    }
+  }
+
+  return (
+    <div className="border border-slate-300 p-5 text-sm leading-6 text-slate-600">
+      <p>Si deseas completar tu denuncia con una grabación de voz, puedes hacerlo pulsando el siguiente botón. Una vez grabada, podrás distorsionar la voz y mantener a salvo tu identidad.</p>
+      <button type="button" onClick={toggleRecording} className="mt-4 rounded bg-amber-400 px-4 py-3 text-sm font-semibold text-slate-900 transition hover:bg-amber-300">{recording ? 'Detener grabación' : 'Iniciar grabación oral'}</button>
+      {audioUrl && <audio controls src={audioUrl} className="mt-4 w-full" />}
+      {error && <p className="mt-3 text-sm text-red-700">{error}</p>}
     </div>
   );
 }
