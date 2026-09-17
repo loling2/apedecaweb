@@ -153,7 +153,11 @@ function App() {
 
   // Determine which page to render
   const requestedSlug = currentPath === '/' || currentPath === '' ? 'inicio' : currentPath.replace(/^\//, '');
-  const slug = requestedSlug === 'about-us' ? 'quienes-somos' : requestedSlug;
+  const slug = requestedSlug === 'about-us'
+    ? 'quienes-somos'
+    : requestedSlug === 'politica-cookies'
+      ? 'pol-tica-de-cookies'
+      : requestedSlug;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -233,7 +237,7 @@ function CookieConsentBanner({ onNavigate }: { onNavigate: (href: string) => voi
               Esta web utiliza cookies propias y de terceros para mejorar tu experiencia de navegación, recordar tus preferencias y obtener información estadística sobre el uso del sitio. Puedes aceptar todas, rechazar las no esenciales o consultar nuestra política de cookies para más información.
             </p>
             <button
-              onClick={() => onNavigate('/politica-cookies')}
+              onClick={() => onNavigate('/pol-tica-de-cookies')}
               className="mt-2 text-sm font-medium text-sky-600 underline transition hover:text-sky-800"
             >
               Consultar la política de cookies
@@ -1953,7 +1957,7 @@ function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: 
           <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => onNavigate('/aviso-legal')} className="transition hover:text-white">Aviso legal</button>
             <button onClick={() => onNavigate('/politica-privacidad')} className="transition hover:text-white">Privacidad</button>
-            <button onClick={() => onNavigate('/politica-cookies')} className="transition hover:text-white">Cookies</button>
+            <button onClick={() => onNavigate('/pol-tica-de-cookies')} className="transition hover:text-white">Cookies</button>
             <button onClick={() => onNavigate('/accesibilidad')} className="transition hover:text-white">Accesibilidad</button>
           </div>
         </div>
