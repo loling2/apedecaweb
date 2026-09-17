@@ -415,12 +415,12 @@ function DynamicPage({ slug }: { slug: string }) {
   return (
     <main className="bg-white">
       {slug !== 'inicio' && (page.banner_image || page.title) && <PageBanner title={page.title} image={page.banner_image} />}
-      {blocks.map((block) => <BlockRenderer key={block.id} block={block} />)}
+      {blocks.map((block) => <BlockRenderer key={block.id} block={block} onNavigate={navigate} />)}
     </main>
   );
 }
 
-function BlockRenderer({ block }: { block: CmsBlock }) {
+function BlockRenderer({ block, onNavigate }: { block: CmsBlock; onNavigate: (href: string) => void }) {
   switch (block.block_type) {
     case 'hero':
       return <HeroBlock block={block} />;
@@ -451,7 +451,7 @@ function BlockRenderer({ block }: { block: CmsBlock }) {
     case 'volunteer-process':
       return <VolunteerProcessBlock block={block} />;
     case 'link-group':
-      return <LinkGroupBlock block={block} />;
+      return <LinkGroupBlock block={block} onNavigate={onNavigate} />;
     default:
       return null;
   }
@@ -472,7 +472,7 @@ function parseLinkGroup(body: string | null): LinkCardItem[] {
     .filter((item) => item.label);
 }
 
-function LinkGroupBlock({ block }: { block: CmsBlock }) {
+function LinkGroupBlock({ block, onNavigate }: { block: CmsBlock; onNavigate: (href: string) => void }) {
   const items = parseLinkGroup(block.body);
   if (items.length === 0) return null;
 
@@ -483,10 +483,9 @@ function LinkGroupBlock({ block }: { block: CmsBlock }) {
         {items.map((item, idx) => {
           const isExternal = item.url?.startsWith('http');
           return (
-            <a
+            <button
               key={idx}
-              href={item.url ?? '#'}
-              {...(isExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
+              onClick={() => onNavigate(item.url ?? '#')}
               className="group flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm transition hover:-translate-y-1 hover:border-sky-400 hover:shadow-md"
             >
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sky-50 text-sky-600 transition group-hover:bg-sky-100">
@@ -494,7 +493,7 @@ function LinkGroupBlock({ block }: { block: CmsBlock }) {
               </div>
               <h3 className="mt-5 text-lg font-semibold text-slate-900">{item.label}</h3>
               {item.description && <p className="mt-2 text-sm leading-6 text-slate-500">{item.description}</p>}
-            </a>
+            </button>
           );
         })}
       </div>
