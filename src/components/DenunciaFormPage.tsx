@@ -1,107 +1,272 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
-import { fetchPageBySlug, fetchBlocks, type CmsBlock, type CmsPage } from '@/lib/cms';
-import { hasSupabaseConfig } from '@/lib/supabase';
-import { fallbackPages, fallbackBlocks } from '@/lib/fallbackContent';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, FileText, ShieldCheck, Upload } from 'lucide-react';
 
 type DenunciaFormPageProps = { onBack: () => void };
+type CommunicationType = '' | 'consulta' | 'denuncia';
+type Identification = '' | 'si' | 'no';
+type ComplaintChannel = 'online' | 'presencial';
+
+type FormValues = {
+  communicationType: CommunicationType;
+  identification: Identification;
+  complaintChannel: ComplaintChannel;
+  entity: string;
+  name: string;
+  firstSurname: string;
+  secondSurname: string;
+  dni: string;
+  email: string;
+  phone: string;
+  category: string;
+  relation: string;
+  company: string;
+  consultation: string;
+  description: string;
+  places: string;
+  period: string;
+  peopleInvolved: string;
+};
+
+const initialValues: FormValues = {
+  communicationType: '',
+  identification: '',
+  complaintChannel: 'online',
+  entity: '',
+  name: '',
+  firstSurname: '',
+  secondSurname: '',
+  dni: '',
+  email: '',
+  phone: '',
+  category: '',
+  relation: '',
+  company: '',
+  consultation: '',
+  description: '',
+  places: '',
+  period: '',
+  peopleInvolved: '',
+};
+
+const inputClass = 'mt-2 w-full rounded-sm border border-slate-300 bg-[#eef5f8] px-3 py-3 text-[15px] text-slate-700 outline-none transition focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100';
+const labelClass = 'block text-sm leading-6 text-slate-700';
+
+function RequiredMark() {
+  return <span className="text-red-600">* </span>;
+}
+
+function Field({ label, required = false, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+  return <label className={labelClass}>{required && <RequiredMark />}{label}{children}</label>;
+}
+
+function Consent({ checked, onChange, children }: { checked: boolean; onChange: (checked: boolean) => void; children: React.ReactNode }) {
+  return (
+    <label className="flex items-start gap-3 text-sm leading-6 text-slate-700">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-1 h-5 w-5 accent-orange-500" />
+      <span><RequiredMark />{children}</span>
+    </label>
+  );
+}
+
+function FilePicker({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    onChange(Array.from(event.target.files ?? []));
+    event.target.value = '';
+  }
+
+  return (
+    <div>
+      <p className="mb-3 text-sm leading-6 text-slate-600">Si dispone de un documento o archivo que asista a su comunicación, puede cargarlo a continuación.</p>
+      <label className="inline-flex cursor-pointer items-center gap-2 rounded-sm border border-slate-300 bg-[#eef5f8] px-4 py-3 text-sm text-slate-700 transition hover:border-orange-400 hover:bg-orange-50">
+        <Upload size={16} /> Elegir archivos
+        <input type="file" multiple onChange={handleChange} className="sr-only" />
+      </label>
+      {files.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {files.map((file) => <div key={`${file.name}-${file.size}`} className="flex items-center gap-2 text-sm text-slate-600"><FileText size={15} className="text-orange-500" /> {file.name}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function DenunciaFormPage({ onBack }: DenunciaFormPageProps) {
-  const [communicationType, setCommunicationType] = useState('');
-  const [accepted, setAccepted] = useState(false);
+  const [values, setValues] = useState<FormValues>(initialValues);
+  const [step, setStep] = useState<'start' | 'details'>('start');
+  const [acceptedProvider, setAcceptedProvider] = useState(false);
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   const [submitted, setSubmitted] = useState(false);
-  const [page, setPage] = useState<CmsPage | null>(null);
-  const [blocks, setBlocks] = useState<CmsBlock[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      if (!hasSupabaseConfig) {
-        const found = fallbackPages.find((p) => p.slug === 'formulario-denuncias');
-        if (found && active) {
-          setPage(found);
-          setBlocks((fallbackBlocks[found.id] ?? []).filter((b) => b.is_visible));
-        }
-        setLoading(false);
-        return;
-      }
-      try {
-        const found = await fetchPageBySlug('formulario-denuncias');
-        if (!found || !active) { setLoading(false); return; }
-        const blks = await fetchBlocks(found.id);
-        if (!active) return;
-        setPage(found);
-        setBlocks(blks.filter((b) => b.is_visible).sort((a, b) => a.sort_order - b.sort_order));
-      } catch {
-        /* page not found is fine, form still works */
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
+  function updateValue<K extends keyof FormValues>(key: K, value: FormValues[K]) {
+    setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function selectCommunication(event: ChangeEvent<HTMLSelectElement>) {
+    const communicationType = event.target.value as CommunicationType;
+    updateValue('communicationType', communicationType);
+    setStep('start');
+    setAcceptedPrivacy(false);
+  }
+
+  function continueToDetails(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!values.communicationType || !acceptedProvider) return;
+    setStep('details');
+  }
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!communicationType || !accepted) return;
+    if (!acceptedPrivacy || !acceptedProvider) return;
     setSubmitted(true);
+  }
+
+  function resetForm() {
+    setValues(initialValues);
+    setStep('start');
+    setAcceptedProvider(false);
+    setAcceptedPrivacy(false);
+    setFiles([]);
+    setSubmitted(false);
+  }
+
+  if (submitted) {
+    return (
+      <main className="bg-white">
+        <section className="mx-auto max-w-4xl px-6 py-20 lg:px-10">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center sm:p-14">
+            <CheckCircle2 className="mx-auto text-emerald-600" size={56} />
+            <h1 className="mt-6 text-3xl font-light text-slate-900 sm:text-4xl">Comunicación enviada</h1>
+            <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-600">Hemos recibido tu comunicación correctamente. La información será tratada de forma confidencial.</p>
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <button type="button" onClick={resetForm} className="rounded bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600">Realizar otra comunicación</button>
+              <button type="button" onClick={onBack} className="rounded border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 transition hover:border-orange-400">Volver al canal</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
   }
 
   return (
     <main className="bg-white">
-      <section className="bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 px-6 py-16 text-white sm:py-20">
-        <div className="mx-auto max-w-6xl">
-          <button onClick={onBack} className="mb-10 inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white">
-            <ArrowLeft size={17} /> Volver al canal de denuncias
-          </button>
-          <div className="max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-[.25em] text-amber-100">Canal seguro y confidencial</p>
-            <h1 className="mt-4 text-4xl font-light leading-tight sm:text-6xl">{page?.title ?? 'Tramitar información o consulta'}</h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-orange-50">{page?.subtitle ?? 'Completa este primer paso para acceder al formulario de comunicación del canal de denuncias.'}</p>
-          </div>
+      <section className="mx-auto max-w-6xl px-6 pb-8 pt-8 lg:px-10">
+        <button onClick={step === 'details' ? () => setStep('start') : onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-orange-600 transition hover:text-orange-700">
+          <ArrowLeft size={17} /> {step === 'details' ? 'Volver al paso anterior' : 'Volver al canal de denuncias'}
+        </button>
+        <div className="mt-8 max-w-4xl">
+          <p className="text-sm font-bold uppercase tracking-[.2em] text-orange-500">Canal seguro y confidencial</p>
+          <h1 className="mt-3 text-3xl font-light leading-tight text-slate-900 sm:text-5xl">Tramitar información o consulta</h1>
+          <p className="mt-4 text-lg leading-8 text-slate-600">Completa los datos para realizar una comunicación a través del canal de denuncias.</p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-10 px-6 py-14 lg:grid-cols-[1fr_320px] lg:px-10">
-        <div>
-          {!loading && blocks.filter((b) => b.block_type === 'text').map((block) => (
-            <div key={block.id} className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-              {block.title && <h2 className="mb-4 text-2xl font-light text-slate-900">{block.title}</h2>}
-              {block.body && <p className="whitespace-pre-line leading-8 text-slate-600">{block.body}</p>}
-            </div>
-          ))}
+      <section className="mx-auto max-w-6xl px-6 pb-16 lg:px-10">
+        <div className="mb-8 flex items-start gap-4 rounded border border-amber-300 bg-amber-50 px-6 py-5 text-slate-700">
+          <Clock3 className="mt-0.5 flex-shrink-0 text-orange-600" size={22} />
+          <p className="leading-7">Por motivos de seguridad tienes <strong>20 minutos</strong> para realizar tu comunicación a contar desde el momento en que accediste a esta página.</p>
+        </div>
 
-          <div className="mb-8 flex items-start gap-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-slate-700">
-            <Clock3 className="mt-0.5 flex-shrink-0 text-orange-600" size={22} />
-            <p className="leading-7">Por motivos de seguridad tienes <strong>20 minutos</strong> para realizar tu comunicación desde que accedes a esta página.</p>
-          </div>
-          <form onSubmit={submit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
-            <p className="mb-8 italic text-slate-600">Los campos marcados con <span className="font-bold text-red-600">*</span> son obligatorios.</p>
-            <label className="block text-base font-semibold text-slate-800">
-              <span className="text-red-600">* </span>Selecciona un tipo de comunicación
-              <select required value={communicationType} onChange={(event) => setCommunicationType(event.target.value)} className="mt-3 w-full rounded-lg border border-slate-300 bg-slate-50 px-4 py-3 font-normal text-slate-700 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-100">
+        {step === 'start' ? (
+          <form onSubmit={continueToDetails} className="max-w-4xl space-y-8">
+            <p className="italic text-slate-600">Los campos marcados con un <span className="text-red-600">*</span> son obligatorios.</p>
+            <Field label="Selecciona un tipo de comunicación" required>
+              <select required value={values.communicationType} onChange={selectCommunication} className={`${inputClass} max-w-md`}>
                 <option value="">Selecciona una opción …</option>
                 <option value="consulta">Consulta</option>
                 <option value="denuncia">Información (Denuncia)</option>
               </select>
-            </label>
-            <p className="mt-8 leading-7 text-slate-600">Consulta la <a href="/politica-privacidad" className="font-semibold text-orange-600 underline underline-offset-4">política de privacidad del canal de denuncias</a> antes de continuar.</p>
-            <label className="mt-6 flex items-start gap-3 text-slate-700">
-              <input required type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} className="mt-1 h-5 w-5 accent-orange-500" />
-              <span><span className="text-red-600">* </span>He leído y acepto las <a href="#condiciones" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</span>
-            </label>
-            <button type="submit" className="mt-9 inline-flex min-w-44 items-center justify-center gap-2 rounded-lg bg-orange-500 px-8 py-3.5 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">ENVIAR <ExternalLink size={17} /></button>
-            {submitted && <p className="mt-5 flex items-center gap-2 rounded-lg bg-emerald-50 p-4 font-medium text-emerald-800"><CheckCircle2 size={19} /> La selección se ha validado. En el siguiente paso conectaremos el formulario definitivo.</p>}
+            </Field>
+
+            {values.communicationType === 'denuncia' && (
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => updateValue('complaintChannel', 'online')} className={`rounded border px-4 py-3 text-sm transition ${values.complaintChannel === 'online' ? 'border-slate-700 bg-slate-700 font-semibold text-white' : 'border-slate-300 text-slate-700 hover:border-orange-400'}`}>Información (Denuncia) On Line</button>
+                <button type="button" onClick={() => updateValue('complaintChannel', 'presencial')} className={`rounded border px-4 py-3 text-sm transition ${values.complaintChannel === 'presencial' ? 'border-slate-700 bg-slate-700 font-semibold text-white' : 'border-slate-300 text-slate-700 hover:border-orange-400'}`}>Información (Denuncia) con reunión presencial</button>
+              </div>
+            )}
+
+            <div className="space-y-4 border-t border-slate-200 pt-7">
+              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="#condiciones" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
+            </div>
+            <button type="submit" disabled={!values.communicationType || !acceptedProvider} className="inline-flex items-center gap-2 rounded bg-orange-500 px-7 py-3.5 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">CONTINUAR <ArrowRight size={17} /></button>
           </form>
-        </div>
-        <aside className="h-fit rounded-2xl bg-slate-50 p-7">
-          <ShieldCheck className="text-orange-500" size={32} />
-          <h2 className="mt-5 text-2xl font-light text-slate-900">Tu comunicación está protegida</h2>
-          <p className="mt-4 leading-7 text-slate-600">Puedes realizar una comunicación con identificación o de forma anónima. La información se tratará de forma confidencial.</p>
-          <div className="mt-6 border-t border-slate-200 pt-5 text-sm leading-6 text-slate-500">La información falsa comunicada deliberadamente puede tener consecuencias legales. Utiliza este canal de buena fe.</div>
+        ) : (
+          <form onSubmit={submit} className="max-w-5xl space-y-8">
+            <p className="italic text-slate-600">Los campos marcados con un <span className="text-red-600">*</span> son obligatorios.</p>
+            <Field label="¿Desea identificarse?" required>
+              <select required value={values.identification} onChange={(event) => updateValue('identification', event.target.value as Identification)} className={`${inputClass} max-w-md`}>
+                <option value="">Selecciona una opción …</option>
+                <option value="si">Sí</option>
+                <option value="no">No</option>
+              </select>
+            </Field>
+
+            {values.communicationType === 'consulta' ? <ConsultationFields values={values} updateValue={updateValue} files={files} setFiles={setFiles} /> : <ComplaintFields values={values} updateValue={updateValue} files={files} setFiles={setFiles} />}
+
+            <div className="space-y-5 border-t border-slate-200 pt-7">
+              <p className="leading-7 text-slate-600">Consulta la <a href="/politica-privacidad" className="font-semibold text-orange-600 underline underline-offset-4">política de privacidad del canal de denuncias</a> antes de continuar.</p>
+              <Consent checked={acceptedPrivacy} onChange={setAcceptedPrivacy}>He leído y acepto la política de privacidad del canal de denuncias de <strong>SERVICIOS Y GESTION RESIDENCIAL EN CANARIAS, S.L. - GERONTALIA, S.L. - ASOCIACIÓN DE AYUDA A PERSONAS CON DEPENDENCIA EN CANARIAS</strong>. <a href="/politica-privacidad" className="font-semibold text-orange-600 underline underline-offset-4">Ver aquí</a>.</Consent>
+              <Consent checked={acceptedProvider} onChange={setAcceptedProvider}>He leído y acepto las <a href="#condiciones" className="font-semibold text-orange-600 underline underline-offset-4">condiciones de uso del proveedor</a>.</Consent>
+            </div>
+            <button type="submit" disabled={!acceptedPrivacy || !acceptedProvider} className="rounded bg-orange-500 px-7 py-3.5 font-bold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50">ENVIAR {values.communicationType === 'consulta' ? 'CONSULTA' : 'DENUNCIA'}</button>
+          </form>
+        )}
+
+        <aside className="mt-12 max-w-4xl rounded bg-slate-50 p-7">
+          <div className="flex gap-4">
+            <ShieldCheck className="mt-1 flex-shrink-0 text-orange-500" size={30} />
+            <div>
+              <h2 className="text-xl font-semibold text-slate-900">Tu comunicación está protegida</h2>
+              <p className="mt-2 leading-7 text-slate-600">Puedes realizar una comunicación con identificación o de forma anónima. La información se tratará de forma confidencial.</p>
+            </div>
+          </div>
         </aside>
       </section>
     </main>
+  );
+}
+
+function ConsultationFields({ values, updateValue, files, setFiles }: { values: FormValues; updateValue: <K extends keyof FormValues>(key: K, value: FormValues[K]) => void; files: File[]; setFiles: (files: File[]) => void }) {
+  return (
+    <div className="space-y-7">
+      {values.identification === 'si' && <IdentityFields values={values} updateValue={updateValue} />}
+      <Field label="Consulta" required><textarea required value={values.consultation} onChange={(event) => updateValue('consultation', event.target.value)} className={`${inputClass} min-h-44`} /></Field>
+      <FilePicker files={files} onChange={setFiles} />
+    </div>
+  );
+}
+
+function ComplaintFields({ values, updateValue, files, setFiles }: { values: FormValues; updateValue: <K extends keyof FormValues>(key: K, value: FormValues[K]) => void; files: File[]; setFiles: (files: File[]) => void }) {
+  return (
+    <div className="space-y-7">
+      {values.identification === 'si' && <IdentityFields values={values} updateValue={updateValue} />}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Field label="Seleccione una categoría"><select value={values.category} onChange={(event) => updateValue('category', event.target.value)} className={inputClass}><option value="">Selecciona una opción …</option><option value="laboral">Ámbito laboral</option><option value="servicios">Servicios y atención</option><option value="financiera">Información financiera</option><option value="otra">Otra</option></select></Field>
+        <Field label="¿Cuál es la entidad a la que quiere presentar información (denuncia)?" required><select required value={values.entity} onChange={(event) => updateValue('entity', event.target.value)} className={inputClass}><option value="">Selecciona una opción …</option><option value="apedeca">Asociación Apedeca</option><option value="gerontalia">Gerontalia</option><option value="servicios">Servicios y Gestión Residencial en Canarias</option></select></Field>
+        <Field label="Identifique la relación con la organización/sociedad" required><select required value={values.relation} onChange={(event) => updateValue('relation', event.target.value)} className={inputClass}><option value="">Selecciona una opción …</option><option value="empleado">Empleado/a</option><option value="proveedor">Proveedor/a</option><option value="usuario">Usuario/a</option><option value="otro">Otra</option></select></Field>
+      </div>
+      <Field label="Indique la sociedad del grupo para la que licitó o presta servicios su empresa"><textarea value={values.company} onChange={(event) => updateValue('company', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Facilite una descripción lo más detallada posible de los hechos objeto de su información (denuncia). Por favor, ordene la descripción cronológicamente y aporte toda la información que pueda ser relevante para la investigación de los hechos informados" required><textarea required value={values.description} onChange={(event) => updateValue('description', event.target.value)} className={`${inputClass} min-h-28`} /></Field>
+      <Field label="Identifique el lugar o lugares en los que han tenido o están teniendo lugar los hechos informados" required><textarea required value={values.places} onChange={(event) => updateValue('places', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Describa el momento o período de tiempo durante el que han tenido lugar los hechos informados" required><textarea required value={values.period} onChange={(event) => updateValue('period', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <Field label="Identifique a la persona o personas implicadas en este comportamiento, y en su caso, la sociedad del grupo en la que trabajan" required><textarea required value={values.peopleInvolved} onChange={(event) => updateValue('peopleInvolved', event.target.value)} className={`${inputClass} min-h-24`} /></Field>
+      <FilePicker files={files} onChange={setFiles} />
+    </div>
+  );
+}
+
+function IdentityFields({ values, updateValue }: { values: FormValues; updateValue: <K extends keyof FormValues>(key: K, value: FormValues[K]) => void }) {
+  return (
+    <div className="rounded border border-slate-300 p-5 sm:p-6">
+      <Field label="Entidad"><input value={values.entity} onChange={(event) => updateValue('entity', event.target.value)} className={inputClass} /></Field>
+      <div className="mt-5 grid gap-5 md:grid-cols-3">
+        <Field label="Nombre" required><input required value={values.name} onChange={(event) => updateValue('name', event.target.value)} className={inputClass} /></Field>
+        <Field label="Primer apellido" required><input required value={values.firstSurname} onChange={(event) => updateValue('firstSurname', event.target.value)} className={inputClass} /></Field>
+        <Field label="Segundo apellido" required><input required value={values.secondSurname} onChange={(event) => updateValue('secondSurname', event.target.value)} className={inputClass} /></Field>
+        <Field label="NIF/DNI"><input value={values.dni} onChange={(event) => updateValue('dni', event.target.value)} className={inputClass} /></Field>
+        <Field label="Email" required><input required type="email" value={values.email} onChange={(event) => updateValue('email', event.target.value)} className={inputClass} /></Field>
+        <Field label="Teléfono" required><input required type="tel" value={values.phone} onChange={(event) => updateValue('phone', event.target.value)} className={inputClass} /></Field>
+      </div>
+    </div>
   );
 }
