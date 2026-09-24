@@ -954,8 +954,8 @@ function ImageBlock({ block }: { block: CmsBlock }) {
         {block.image_url && <img src={block.image_url} alt={block.title ?? ''} className="h-[360px] w-full rounded-xl object-cover shadow-lg sm:h-[420px]" />}
       </div>
       <div className="order-1 lg:order-2">
-        {block.title && <h3 className="text-4xl font-light text-slate-900 sm:text-5xl">{block.title}</h3>}
-        {block.body && <p className="mt-6 whitespace-pre-line text-lg leading-9 text-slate-600">{block.body}</p>}
+        {block.title && <h3 className="text-3xl font-light text-slate-900 sm:text-4xl">{block.title}</h3>}
+        {block.body && <p className="mt-5 whitespace-pre-line text-base leading-8 text-slate-600">{block.body}</p>}
       </div>
     </section>
   );
