@@ -468,6 +468,10 @@ export type ConvenioCategory = {
   tone: 'blue' | 'lime';
   sort_order: number;
   is_visible: boolean;
+  intro_title?: string | null;
+  intro_body?: string | null;
+  intro_image_url?: string | null;
+  intro_visible?: boolean;
 };
 
 export type ConvenioEntry = {
@@ -492,7 +496,7 @@ export async function createConvenioCategory(input: { label: string; icon_name: 
   return data as ConvenioCategory;
 }
 
-export async function updateConvenioCategory(id: string, input: Partial<{ label: string; icon_name: string; tone: string; sort_order: number; is_visible: boolean }>): Promise<ConvenioCategory> {
+export async function updateConvenioCategory(id: string, input: Partial<{ label: string; icon_name: string; tone: string; sort_order: number; is_visible: boolean; intro_title: string | null; intro_body: string | null; intro_image_url: string | null; intro_visible: boolean }>): Promise<ConvenioCategory> {
   const { data, error } = await supabase.from('ape_convenio_categories').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
   if (error) throw error;
   return data as ConvenioCategory;

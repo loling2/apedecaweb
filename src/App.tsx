@@ -1555,6 +1555,8 @@ function ConveniosPage() {
     ? categories
     : fallbackConvenioItems.map((c, i) => ({ id: `fb-${i}`, label: c.label, icon_name: c.icon_name, tone: c.tone as 'blue' | 'lime', sort_order: i, is_visible: true }));
 
+  const voluntariadoIntro = categories.find((c) => c.label === 'Voluntariado');
+
   return (
     <main className="bg-white">
       <PageBanner title="CONVENIOS" image="https://images.pexels.com/photos/3184436/pexels-photo-3184436.jpeg?auto=compress&cs=tinysrgb&w=1600" />
@@ -1571,17 +1573,23 @@ function ConveniosPage() {
           })}
         </div>
       </section>
-      <section id="voluntariado" className={`${selectedCategory === 'Voluntariado' ? '' : 'hidden'} border-t border-slate-100 px-6 py-20 lg:px-10`}>
-        <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[.25em] text-sky-600">Voluntariado</p>
-            <h2 className="mt-3 text-4xl font-light text-slate-900 sm:text-5xl">Oficina del voluntariado</h2>
-            <p className="mt-6 text-lg leading-9 text-slate-600">A través del Cabildo de Tenerife y Sinpromi se gestiona esta oficina del voluntariado, en la que nuestra organización está dada de alta desde el 29 de julio de 2013, apoyando y beneficiándonos de la amplia red de voluntariado.</p>
-            <a href="#contacto" className="mt-7 inline-flex rounded bg-sky-500 px-7 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Descubre más</a>
+      {voluntariadoIntro && voluntariadoIntro.intro_visible !== false && (
+        <section id="voluntariado" className={`${selectedCategory === 'Voluntariado' ? '' : 'hidden'} border-t border-slate-100 px-6 py-20 lg:px-10`}>
+          <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[.25em] text-sky-600">Voluntariado</p>
+              <h2 className="mt-3 text-4xl font-light text-slate-900 sm:text-5xl">{voluntariadoIntro.intro_title ?? 'Oficina del voluntariado'}</h2>
+              {voluntariadoIntro.intro_body && <p className="mt-6 text-lg leading-9 text-slate-600">{voluntariadoIntro.intro_body}</p>}
+              <a href="#contacto" className="mt-7 inline-flex rounded bg-sky-500 px-7 py-3 font-semibold text-slate-950 transition hover:bg-sky-400">Descubre más</a>
+            </div>
+            {voluntariadoIntro.intro_image_url ? (
+              <img src={voluntariadoIntro.intro_image_url} alt="" className="rounded-2xl object-cover" />
+            ) : (
+              <div className="rounded-2xl bg-sky-50 p-8 text-center"><div className="text-7xl font-light text-sky-600">♥</div><p className="mt-4 text-xl font-semibold text-sky-700">Tenerife Isla Solidaria</p><p className="mt-2 text-slate-600">Una red para compartir, ayudar y construir una sociedad más comprometida.</p></div>
+            )}
           </div>
-          <div className="rounded-2xl bg-sky-50 p-8 text-center"><div className="text-7xl font-light text-sky-600">♥</div><p className="mt-4 text-xl font-semibold text-sky-700">Tenerife Isla Solidaria</p><p className="mt-2 text-slate-600">Una red para compartir, ayudar y construir una sociedad más comprometida.</p></div>
-        </div>
-      </section>
+        </section>
+      )}
       <section className="border-t border-slate-100 bg-white px-6 py-20 lg:px-10">
         <div className="mx-auto max-w-6xl">
           <p className="text-center text-sm font-bold uppercase tracking-[.25em] text-sky-600">Nuestros convenios</p>

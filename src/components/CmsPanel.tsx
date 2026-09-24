@@ -1907,6 +1907,10 @@ function ConvenioCategoryEditForm({ category, onClose, onSaved }: { category: Co
   const [label, setLabel] = useState(category.label);
   const [iconName, setIconName] = useState(category.icon_name);
   const [tone, setTone] = useState(category.tone);
+  const [introTitle, setIntroTitle] = useState(category.intro_title ?? '');
+  const [introBody, setIntroBody] = useState(category.intro_body ?? '');
+  const [introImage, setIntroImage] = useState(category.intro_image_url ?? '');
+  const [introVisible, setIntroVisible] = useState(category.intro_visible !== false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -1914,10 +1918,18 @@ function ConvenioCategoryEditForm({ category, onClose, onSaved }: { category: Co
     e.preventDefault();
     setSaving(true); setError('');
     try {
-      await updateConvenioCategory(category.id, { label, icon_name: iconName, tone });
+      await updateConvenioCategory(category.id, {
+        label, icon_name: iconName, tone,
+        intro_title: introTitle || null,
+        intro_body: introBody || null,
+        intro_image_url: introImage || null,
+        intro_visible: introVisible,
+      });
       await onSaved();
     } catch { setError('No se pudo guardar.'); } finally { setSaving(false); }
   }
+
+  const isVoluntariado = category.label === 'Voluntariado';
 
   return (
     <Modal title="Editar icono" onClose={onClose}>
@@ -1936,6 +1948,24 @@ function ConvenioCategoryEditForm({ category, onClose, onSaved }: { category: Co
             <option value="lime">Lima</option>
           </select>
         </Field>
+
+        {isVoluntariado && (
+          <div className="space-y-4 rounded-lg border border-sky-100 bg-sky-50/50 p-4">
+            <p className="text-sm font-bold uppercase tracking-wider text-sky-700">Bloque de presentación</p>
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input type="checkbox" checked={introVisible} onChange={(e) => setIntroVisible(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" />
+              Mostrar bloque de presentación
+            </label>
+            <Field label="Título del bloque">
+              <input value={introTitle} onChange={(e) => setIntroTitle(e.target.value)} placeholder="Oficina del voluntariado" className={inputClass} />
+            </Field>
+            <Field label="Texto descriptivo">
+              <textarea value={introBody} onChange={(e) => setIntroBody(e.target.value)} rows={4} className={`${inputClass} resize-y`} />
+            </Field>
+            <ImageInput label="Imagen del bloque" value={introImage} onChange={setIntroImage} />
+          </div>
+        )}
+
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         <SaveButton saving={saving} label="Guardar cambios" />
       </form>
