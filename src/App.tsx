@@ -949,10 +949,14 @@ function ProjectsSliderSection() {
 
 function ImageBlock({ block }: { block: CmsBlock }) {
   return (
-    <section className="mx-auto max-w-5xl px-6 py-16 lg:px-10">
-      {block.image_url && <img src={block.image_url} alt={block.title ?? ''} className="h-[400px] w-full rounded-xl object-cover shadow-lg" />}
-      {block.title && <h3 className="mt-6 text-center text-2xl font-light text-slate-900">{block.title}</h3>}
-      {block.body && <p className="mt-3 text-center text-slate-500">{block.body}</p>}
+    <section className="mx-auto grid max-w-6xl items-center gap-12 px-6 py-20 lg:grid-cols-2 lg:gap-20 lg:px-10">
+      <div className="relative order-2 lg:order-1">
+        {block.image_url && <img src={block.image_url} alt={block.title ?? ''} className="h-[360px] w-full rounded-xl object-cover shadow-lg sm:h-[420px]" />}
+      </div>
+      <div className="order-1 lg:order-2">
+        {block.title && <h3 className="text-4xl font-light text-slate-900 sm:text-5xl">{block.title}</h3>}
+        {block.body && <p className="mt-6 whitespace-pre-line text-lg leading-9 text-slate-600">{block.body}</p>}
+      </div>
     </section>
   );
 }
