@@ -42,6 +42,7 @@ import {
   X,
   Youtube,
   UsersRound,
+  Music2,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -405,7 +406,8 @@ function TopBar({ navItems, settings, onNavigate, sessionEmail, onSignOut }: { n
             {settings?.facebook_url && <a href={settings.facebook_url} target="_blank" rel="noreferrer"><Facebook size={18} fill="currentColor" /></a>}
             {settings?.instagram_url && <a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={19} /></a>}
             {settings?.linkedin_url && <a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={18} fill="currentColor" /></a>}
-            {settings?.youtube_url && <a href={settings.youtube_url} target="_blank" rel="noreferrer"><Youtube size={19} fill="currentColor" /></a>}
+            {settings?.youtube_url && <a href={settings.youtube_url} target="_blank" rel="noreferrer"><Youtube size={19} /></a>}
+            {settings?.tiktok_url && <a href={settings.tiktok_url} target="_blank" rel="noreferrer"><Music2 size={18} /></a>}
           </div>
           <button onClick={() => onNavigate('/')} className="group flex items-center gap-2" aria-label="Apedeca inicio">
             {settings?.logo_url ? (
@@ -1948,6 +1950,7 @@ function Footer({ navItems, settings, footerLinks, onNavigate, onAdminAccess }: 
     { url: settings?.instagram_url, Icon: Instagram },
     { url: settings?.linkedin_url, Icon: Linkedin },
     { url: settings?.youtube_url, Icon: Youtube },
+    { url: settings?.tiktok_url, Icon: Music2 },
   ].filter((s) => s.url);
   const year = new Date().getFullYear();
   return (

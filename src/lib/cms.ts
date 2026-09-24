@@ -54,6 +54,7 @@ export type CmsSettings = {
   instagram_url: string | null;
   linkedin_url: string | null;
   youtube_url: string | null;
+  tiktok_url: string | null;
 };
 
 export type BlockInput = Omit<CmsBlock, 'id' | 'created_at' | 'updated_at'> & { id?: string };
