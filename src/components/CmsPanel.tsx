@@ -7,6 +7,7 @@ import {
   FileText,
   FolderCog,
   GripVertical,
+  Handshake,
   Image as ImageIcon,
   LayoutDashboard,
   Link2,
@@ -44,6 +45,14 @@ import {
   createFooterLink,
   updateFooterLink,
   deleteFooterLink,
+  fetchConvenioCategories,
+  createConvenioCategory,
+  updateConvenioCategory,
+  deleteConvenioCategory,
+  fetchConvenioEntries,
+  createConvenioEntry,
+  updateConvenioEntry,
+  deleteConvenioEntry,
   fetchSettings,
   updateSettings,
   uploadImage,
@@ -76,9 +85,11 @@ import {
   type TransparencySection,
   type TransparencyItem,
   type TransparencyDoc,
+  type ConvenioCategory,
+  type ConvenioEntry,
 } from '@/lib/cms';
 
-type Tab = 'pages' | 'projects' | 'jobs' | 'nav' | 'transparency' | 'footer' | 'settings';
+type Tab = 'pages' | 'projects' | 'jobs' | 'nav' | 'transparency' | 'footer' | 'settings' | 'convenios';
 
 type Props = {
   userEmail: string;
@@ -100,6 +111,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
           <SidebarLink active={tab === 'projects'} onClick={() => setTab('projects')} icon={FolderCog} label="Proyectos" />
           <SidebarLink active={tab === 'jobs'} onClick={() => setTab('jobs')} icon={Briefcase} label="Trabaja con nosotros" />
           <SidebarLink active={tab === 'transparency'} onClick={() => setTab('transparency')} icon={FileText} label="Transparencia" />
+          <SidebarLink active={tab === 'convenios'} onClick={() => setTab('convenios')} icon={Handshake} label="Convenios" />
           <SidebarLink active={tab === 'nav'} onClick={() => setTab('nav')} icon={Link2} label="Menú de navegación" />
           <SidebarLink active={tab === 'footer'} onClick={() => setTab('footer')} icon={Link2} label="Enlaces de interés" />
           <SidebarLink active={tab === 'settings'} onClick={() => setTab('settings')} icon={Settings} label="Ajustes del sitio" />
@@ -115,9 +127,9 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
       <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between gap-2 bg-slate-900 px-4 py-3 text-white sm:hidden">
         <span className="flex-shrink-0 text-sm font-semibold">CMS</span>
         <div className="flex flex-wrap justify-end gap-1.5">
-          {(['pages', 'projects', 'jobs', 'transparency', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
+          {(['pages', 'projects', 'jobs', 'transparency', 'convenios', 'nav', 'footer', 'settings'] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className={`rounded px-3 py-1.5 text-xs ${tab === t ? 'bg-sky-500' : 'bg-slate-800'}`}>
-              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'jobs' ? 'Empleo' : t === 'transparency' ? 'Transp.' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
+              {t === 'pages' ? 'Páginas' : t === 'projects' ? 'Proyectos' : t === 'jobs' ? 'Empleo' : t === 'transparency' ? 'Transp.' : t === 'convenios' ? 'Convenios' : t === 'nav' ? 'Menú' : t === 'footer' ? 'Enlaces' : 'Ajustes'}
             </button>
           ))}
           <button onClick={onClose} className="rounded bg-slate-800 p-1.5"><X size={16} /></button>
@@ -129,6 +141,7 @@ export default function CmsPanel({ userEmail, onClose }: Props) {
         {tab === 'projects' && <ProjectsTab />}
         {tab === 'jobs' && <JobsTab />}
         {tab === 'transparency' && <TransparencyTab />}
+        {tab === 'convenios' && <ConveniosTab />}
         {tab === 'nav' && <NavTab />}
         {tab === 'footer' && <FooterTab />}
         {tab === 'settings' && <SettingsTab />}
@@ -1631,5 +1644,301 @@ function ImageInput({ label, value, onChange }: { label: string; value: string; 
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
     </div>
+  );
+}
+
+/* ==================== CONVENIOS TAB ==================== */
+
+const convenioIconOptions = [
+  'Accessibility', 'GraduationCap', 'Handshake', 'UsersRound', 'ClipboardCheck', 'FileText',
+  'Briefcase', 'Building2', 'Award', 'BadgeCheck', 'Lightbulb', 'Heart',
+  'ShieldCheck', 'BookOpen', 'Calendar', 'Mail', 'Phone', 'MapPin',
+] as const;
+
+function ConveniosTab() {
+  const [categories, setCategories] = useState<ConvenioCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<ConvenioCategory | null>(null);
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+
+  useEffect(() => { refresh(); }, []);
+
+  async function refresh() {
+    setLoading(true);
+    try { setCategories(await fetchConvenioCategories()); } catch { setError('No se pudieron cargar las categorías.'); } finally { setLoading(false); }
+  }
+
+  if (loading) return <div className="p-10 text-slate-500">Cargando convenios…</div>;
+
+  if (selectedCategory) return <ConvenioEntryEditor category={selectedCategory} onBack={() => { setSelectedCategory(null); refresh(); }} />;
+
+  return (
+    <div className="mx-auto max-w-4xl p-6 sm:p-10">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-light text-slate-900">Convenios</h1>
+          <p className="mt-2 text-slate-500">Gestiona los iconos de la página de convenios. Activa o desactiva cada icono, y al pulsarlo añade texto e imagen a cada colaboración.</p>
+        </div>
+        <button onClick={() => setShowCategoryForm(true)} className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+          <Plus size={18} /> Nuevo icono
+        </button>
+      </div>
+
+      {error && <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      <div className="mt-8 space-y-3">
+        {categories.map((cat) => (
+          <div key={cat.id} className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+              <Handshake size={26} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate font-semibold text-slate-900">{cat.label}</h3>
+              <p className="mt-0.5 text-sm text-slate-500">Icono: {cat.icon_name} · Color: {cat.tone}</p>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <button
+                onClick={async () => { await updateConvenioCategory(cat.id, { is_visible: !cat.is_visible }); await refresh(); }}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${cat.is_visible ? 'border border-lime-300 bg-lime-50 text-lime-800 hover:bg-lime-100' : 'border border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              >
+                {cat.is_visible ? 'Visible' : 'Oculto'}
+              </button>
+              <button onClick={() => setSelectedCategory(cat)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
+                Editar contenido
+              </button>
+              <button onClick={async () => { if (confirm(`¿Eliminar el icono "${cat.label}" y todas sus colaboraciones?`)) { await deleteConvenioCategory(cat.id); await refresh(); } }} className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:border-red-400 hover:text-red-600" aria-label="Eliminar">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {showCategoryForm && <ConvenioCategoryForm onClose={() => setShowCategoryForm(false)} onSaved={async () => { setShowCategoryForm(false); await refresh(); }} />}
+    </div>
+  );
+}
+
+function ConvenioCategoryForm({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState('');
+  const [iconName, setIconName] = useState<string>('Handshake');
+  const [tone, setTone] = useState('blue');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      await createConvenioCategory({ label, icon_name: iconName, tone, sort_order: 99 });
+      await onSaved();
+    } catch { setError('No se pudo crear el icono.'); } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title="Nuevo icono de convenio" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label="Nombre del icono">
+          <input required value={label} onChange={(e) => setLabel(e.target.value)} className={inputClass} placeholder="Ej: Voluntariado" />
+        </Field>
+        <Field label="Icono">
+          <select value={iconName} onChange={(e) => setIconName(e.target.value)} className={inputClass}>
+            {convenioIconOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </Field>
+        <Field label="Color">
+          <select value={tone} onChange={(e) => setTone(e.target.value)} className={inputClass}>
+            <option value="blue">Azul</option>
+            <option value="lime">Lima</option>
+          </select>
+        </Field>
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <SaveButton saving={saving} label="Crear icono" />
+      </form>
+    </Modal>
+  );
+}
+
+function ConvenioEntryEditor({ category, onBack }: { category: ConvenioCategory; onBack: () => void }) {
+  const [entries, setEntries] = useState<ConvenioEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [editingEntry, setEditingEntry] = useState<ConvenioEntry | null>(null);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [categoryEdit, setCategoryEdit] = useState(false);
+
+  useEffect(() => { refresh(); }, [category.id]);
+
+  async function refresh() {
+    setLoading(true);
+    try { setEntries(await fetchConvenioEntries(category.id)); } catch { setError('No se pudieron cargar las colaboraciones.'); } finally { setLoading(false); }
+  }
+
+  async function moveEntry(entry: ConvenioEntry, dir: -1 | 1) {
+    const sorted = [...entries].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex((e) => e.id === entry.id);
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    await updateConvenioEntry(entry.id, { sort_order: other.sort_order });
+    await updateConvenioEntry(other.id, { sort_order: entry.sort_order });
+    await refresh();
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl p-6 sm:p-10">
+      <button onClick={onBack} className="mb-4 flex items-center gap-2 text-sm text-slate-500 transition hover:text-slate-900">
+        ← Volver a convenios
+      </button>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-light text-slate-900">{category.label}</h1>
+          <p className="mt-2 text-slate-500">Gestiona las colaboraciones de esta categoría. Cada entrada tiene título, texto descriptivo e imagen opcional.</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setCategoryEdit(true)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
+            Editar icono
+          </button>
+          <button onClick={() => { setEditingEntry(null); setShowEntryForm(true); }} className="flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-sky-400">
+            <Plus size={18} /> Nueva colaboración
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="mt-6 rounded-lg bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+
+      {loading ? (
+        <div className="py-10 text-slate-500">Cargando colaboraciones…</div>
+      ) : (
+        <div className="mt-8 space-y-3">
+          {entries.length === 0 && <p className="py-10 text-center text-slate-400">Esta categoría no tiene colaboraciones todavía.</p>}
+          {entries.map((entry, idx) => (
+            <div key={entry.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start gap-4">
+                <div className="flex flex-col gap-1 pt-1">
+                  <button onClick={() => moveEntry(entry, -1)} disabled={idx === 0} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Subir"><ChevronUp size={18} /></button>
+                  <button onClick={() => moveEntry(entry, 1)} disabled={idx === entries.length - 1} className="text-slate-400 transition hover:text-slate-700 disabled:opacity-30" aria-label="Bajar"><ChevronDown size={18} /></button>
+                </div>
+                {entry.image_url && <img src={entry.image_url} alt="" className="h-20 w-32 flex-shrink-0 rounded-lg object-cover" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {!entry.is_visible && <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Oculto</span>}
+                  </div>
+                  <h3 className="mt-1 font-semibold text-slate-900">{entry.title}</h3>
+                  {entry.body && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{entry.body}</p>}
+                </div>
+                <div className="flex flex-shrink-0 gap-2">
+                  <button
+                    onClick={async () => { await updateConvenioEntry(entry.id, { is_visible: !entry.is_visible }); await refresh(); }}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${entry.is_visible ? 'border border-lime-300 bg-lime-50 text-lime-800 hover:bg-lime-100' : 'border border-slate-300 bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                  >
+                    {entry.is_visible ? 'Visible' : 'Oculto'}
+                  </button>
+                  <button onClick={() => { setEditingEntry(entry); setShowEntryForm(true); }} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-600">
+                    Editar
+                  </button>
+                  <button onClick={async () => { if (confirm('¿Eliminar esta colaboración?')) { await deleteConvenioEntry(entry.id); await refresh(); } }} className="rounded-lg border border-slate-200 p-2 text-slate-600 transition hover:border-red-400 hover:text-red-600" aria-label="Eliminar">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showEntryForm && (
+        <ConvenioEntryForm
+          categoryId={category.id}
+          entry={editingEntry}
+          nextOrder={entries.length}
+          onClose={() => setShowEntryForm(false)}
+          onSaved={async () => { setShowEntryForm(false); await refresh(); }}
+        />
+      )}
+
+      {categoryEdit && (
+        <ConvenioCategoryEditForm category={category} onClose={() => setCategoryEdit(false)} onSaved={async () => { setCategoryEdit(false); onBack(); }} />
+      )}
+    </div>
+  );
+}
+
+function ConvenioEntryForm({ categoryId, entry, nextOrder, onClose, onSaved }: { categoryId: string; entry: ConvenioEntry | null; nextOrder: number; onClose: () => void; onSaved: () => void }) {
+  const [title, setTitle] = useState(entry?.title ?? '');
+  const [body, setBody] = useState(entry?.body ?? '');
+  const [imageUrl, setImageUrl] = useState(entry?.image_url ?? '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      if (entry) {
+        await updateConvenioEntry(entry.id, { title, body: body || null, image_url: imageUrl || null });
+      } else {
+        await createConvenioEntry({ category_id: categoryId, title, body: body || null, image_url: imageUrl || null, sort_order: nextOrder });
+      }
+      await onSaved();
+    } catch { setError('No se pudo guardar la colaboración.'); } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title={entry ? 'Editar colaboración' : 'Nueva colaboración'} onClose={onClose}>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label="Título">
+          <input required value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Texto descriptivo">
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} className={`${inputClass} resize-y`} />
+        </Field>
+        <ImageInput label="Imagen (opcional)" value={imageUrl} onChange={setImageUrl} />
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <SaveButton saving={saving} label={entry ? 'Guardar cambios' : 'Crear colaboración'} />
+      </form>
+    </Modal>
+  );
+}
+
+function ConvenioCategoryEditForm({ category, onClose, onSaved }: { category: ConvenioCategory; onClose: () => void; onSaved: () => void }) {
+  const [label, setLabel] = useState(category.label);
+  const [iconName, setIconName] = useState(category.icon_name);
+  const [tone, setTone] = useState(category.tone);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true); setError('');
+    try {
+      await updateConvenioCategory(category.id, { label, icon_name: iconName, tone });
+      await onSaved();
+    } catch { setError('No se pudo guardar.'); } finally { setSaving(false); }
+  }
+
+  return (
+    <Modal title="Editar icono" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-5">
+        <Field label="Nombre del icono">
+          <input required value={label} onChange={(e) => setLabel(e.target.value)} className={inputClass} />
+        </Field>
+        <Field label="Icono">
+          <select value={iconName} onChange={(e) => setIconName(e.target.value)} className={inputClass}>
+            {convenioIconOptions.map((name) => <option key={name} value={name}>{name}</option>)}
+          </select>
+        </Field>
+        <Field label="Color">
+          <select value={tone} onChange={(e) => setTone(e.target.value)} className={inputClass}>
+            <option value="blue">Azul</option>
+            <option value="lime">Lima</option>
+          </select>
+        </Field>
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+        <SaveButton saving={saving} label="Guardar cambios" />
+      </form>
+    </Modal>
   );
 }

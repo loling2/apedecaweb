@@ -69,6 +69,10 @@ import {
   type TransparencySection,
   type TransparencyItem,
   type TransparencyDoc,
+  type ConvenioCategory as ConvenioCatType,
+  type ConvenioEntry as ConvenioEntryType,
+  fetchConvenioCategories,
+  fetchConvenioEntries,
 } from '@/lib/cms';
 import CmsPanel from '@/components/CmsPanel';
 import DenunciaFormPage from '@/components/DenunciaFormPage';
@@ -1468,24 +1472,47 @@ function VoluntariadoPage() {
 
 /* ==================== CONVENIOS ==================== */
 
-const convenioItems = [
-  { label: 'Voluntariado', icon: Accessibility, tone: 'blue', href: '#voluntariado' },
-  { label: 'Formación', icon: GraduationCap, tone: 'lime', href: '#contacto' },
-  { label: 'Inserción laboral', icon: Handshake, tone: 'blue', href: '#contacto' },
-  { label: 'Diversidad Funcional y Mayores', icon: UsersRound, tone: 'lime', href: '#contacto' },
-  { label: 'Inscripciones', icon: ClipboardCheck, tone: 'blue', href: '#inscripciones' },
-  { label: 'Otras colaboraciones', icon: FileText, tone: 'lime', href: '#contacto' },
-] as const;
+const convenioIconMap: Record<string, React.ComponentType<{ size?: string | number; strokeWidth?: number; className?: string }>> = {
+  Accessibility,
+  GraduationCap,
+  Handshake,
+  UsersRound,
+  ClipboardCheck,
+  FileText,
+  Briefcase,
+  Building2,
+  Award,
+  BadgeCheck,
+  Lightbulb,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar: Clock3,
+  BookOpen: FileText,
+  ShieldCheck: BadgeCheck,
+  Heart: Award,
+};
 
-function ConvenioCategory({ title, items, id, visible = true }: { title: string; items: { title: string; body: string }[]; id?: string; visible?: boolean }) {
+const fallbackConvenioItems = [
+  { label: 'Voluntariado', icon_name: 'Accessibility', tone: 'blue' as const },
+  { label: 'Formación', icon_name: 'GraduationCap', tone: 'lime' as const },
+  { label: 'Inserción laboral', icon_name: 'Handshake', tone: 'blue' as const },
+  { label: 'Diversidad Funcional y Mayores', icon_name: 'UsersRound', tone: 'lime' as const },
+  { label: 'Inscripciones', icon_name: 'ClipboardCheck', tone: 'blue' as const },
+  { label: 'Otras colaboraciones', icon_name: 'FileText', tone: 'lime' as const },
+];
+
+function ConvenioCategorySection({ title, entries, id, visible = true }: { title: string; entries: ConvenioEntryType[]; id?: string; visible?: boolean }) {
+  if (!visible || entries.length === 0) return null;
   return (
-    <section id={id} className={`${visible ? '' : 'hidden'} mt-20 first:mt-14`}>
+    <section id={id} className="mt-20 first:mt-14">
       <h2 className="mx-auto w-fit border-b-2 border-lime-400 px-10 pb-3 text-center text-4xl font-light text-slate-900 sm:text-5xl">{title}</h2>
       <div className="mt-12 grid gap-x-10 gap-y-14 md:grid-cols-2">
-        {items.map((item) => (
-          <article key={item.title} className="rounded-sm px-2 py-2">
-            <h3 className="text-2xl font-semibold uppercase leading-tight text-slate-900">{item.title}</h3>
-            <p className="mt-5 whitespace-pre-line text-lg leading-9 text-slate-600">{item.body}</p>
+        {entries.filter((e) => e.is_visible).map((entry) => (
+          <article key={entry.id} className="rounded-sm px-2 py-2">
+            <h3 className="text-2xl font-semibold uppercase leading-tight text-slate-900">{entry.title}</h3>
+            {entry.image_url && <img src={entry.image_url} alt="" className="mt-5 h-48 w-full rounded-lg object-cover" />}
+            {entry.body && <p className="mt-5 whitespace-pre-line text-lg leading-9 text-slate-600">{entry.body}</p>}
             <a href="#contacto" className="mt-6 inline-flex rounded bg-sky-500 px-7 py-3 text-lg text-slate-950 transition hover:bg-sky-400">Descubre más</a>
           </article>
         ))}
@@ -1495,19 +1522,53 @@ function ConvenioCategory({ title, items, id, visible = true }: { title: string;
 }
 
 function ConveniosPage() {
-  const [selectedCategory, setSelectedCategory] = useState('Voluntariado');
+  const [categories, setCategories] = useState<ConvenioCatType[]>([]);
+  const [entriesByCategory, setEntriesByCategory] = useState<Record<string, ConvenioEntryType[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const cats = await fetchConvenioCategories();
+        const visibleCats = cats.filter((c) => c.is_visible);
+        setCategories(visibleCats);
+        const entriesMap: Record<string, ConvenioEntryType[]> = {};
+        await Promise.all(
+          visibleCats.map(async (cat) => {
+            const entries = await fetchConvenioEntries(cat.id);
+            entriesMap[cat.id] = entries;
+          }),
+        );
+        setEntriesByCategory(entriesMap);
+        if (visibleCats.length > 0) setSelectedCategory(visibleCats[0].label);
+      } catch {
+        setCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const iconItems = categories.length > 0
+    ? categories
+    : fallbackConvenioItems.map((c, i) => ({ id: `fb-${i}`, label: c.label, icon_name: c.icon_name, tone: c.tone as 'blue' | 'lime', sort_order: i, is_visible: true }));
 
   return (
     <main className="bg-white">
       <PageBanner title="CONVENIOS" image="https://images.pexels.com/photos/3184436/pexels-photo-3184436.jpeg?auto=compress&cs=tinysrgb&w=1600" />
       <section className="mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-32">
         <div className="grid grid-cols-2 gap-x-6 gap-y-16 sm:grid-cols-3 lg:grid-cols-6 lg:gap-x-8 lg:gap-y-10">
-          {convenioItems.map(({ label, icon: Icon, tone }) => (
-            <button key={label} type="button" onClick={() => setSelectedCategory(label)} aria-pressed={selectedCategory === label} className={`group flex min-h-40 flex-col items-center justify-start rounded-sm border-2 px-4 py-5 text-center transition hover:-translate-y-2 ${selectedCategory === label ? 'border-sky-500 bg-sky-50 shadow-md' : 'border-transparent hover:border-sky-200'}`}>
-              <Icon size={70} strokeWidth={1.6} className={`transition group-hover:scale-110 ${tone === 'blue' ? 'text-sky-600' : 'text-lime-500'}`} />
-              <span className="mt-5 text-lg font-semibold leading-6 text-sky-600 sm:text-xl">{label}</span>
-            </button>
-          ))}
+          {iconItems.map((cat) => {
+            const Icon = convenioIconMap[cat.icon_name] ?? FileText;
+            return (
+              <button key={cat.id} type="button" onClick={() => setSelectedCategory(cat.label)} aria-pressed={selectedCategory === cat.label} className={`group flex min-h-40 flex-col items-center justify-start rounded-sm border-2 px-4 py-5 text-center transition hover:-translate-y-2 ${selectedCategory === cat.label ? 'border-sky-500 bg-sky-50 shadow-md' : 'border-transparent hover:border-sky-200'}`}>
+                <Icon size={70} strokeWidth={1.6} className={`transition group-hover:scale-110 ${cat.tone === 'blue' ? 'text-sky-600' : 'text-lime-500'}`} />
+                <span className="mt-5 text-lg font-semibold leading-6 text-sky-600 sm:text-xl">{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
       <section id="voluntariado" className={`${selectedCategory === 'Voluntariado' ? '' : 'hidden'} border-t border-slate-100 px-6 py-20 lg:px-10`}>
@@ -1525,52 +1586,19 @@ function ConveniosPage() {
         <div className="mx-auto max-w-6xl">
           <p className="text-center text-sm font-bold uppercase tracking-[.25em] text-sky-600">Nuestros convenios</p>
           <h2 className="mt-3 text-center text-4xl font-light text-slate-900 sm:text-5xl">Colaboraciones que transforman</h2>
-          <ConvenioCategory visible={selectedCategory === 'Voluntariado'} title="Voluntariado" items={[
-            { title: 'Federación «Plataforma de Entidades de Voluntariado de Canarias»', body: 'Organización que aúna a todas aquellas entidades que se dedican al voluntariado en la provincia de Santa Cruz de Tenerife, entre ellas APEDECA, asociada desde el 12 de junio de 2017. En julio de 2023 se firmó una colaboración para la modernización y digitalización del voluntariado de nuestra entidad.' },
-            { title: 'Santa Cruz Solidaria', body: 'Desde el año 2022 formamos parte de la red de entidades de voluntariado y comunitarias del municipio de Santa Cruz de Tenerife, con el fin de visibilizar, fomentar y fortalecer la red municipal.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Formación'} title="Formación" items={[
-            { title: 'Radio ECCA', body: 'Desde el 13 de noviembre de 2015 hemos sellado un convenio de colaboración con esta empresa referente en la formación en Canarias desde hace más de 60 años. Desde entonces hemos desarrollado varias acciones conjuntas de formación para beneficiar al colectivo discapacitado.' },
-            { title: 'Círculo de Estudios Divulgación Dinámica', body: 'Empresa de formación y producción educativa especializada en Ciencias Sociales a nivel nacional. El 13 de abril de 2016 se firmó un convenio de colaboración para la donación de cursos del ámbito social, que han aprovechado el personal y voluntariado de nuestra entidad.' },
-            { title: 'Adhesión al Proyecto Fórmate', body: 'APEDECA se ha adherido al Proyecto Fórmate, promovido por Radio ECCA y Fundación Canaria, dirigido a población sin Graduado en Educación Secundaria para orientar y facilitar la obtención de la titulación. Incluye atención y asesoramiento personalizado, tutorización, formación a distancia y flexibilidad horaria.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Inserción laboral'} title="Inserción laboral" items={[
-            { title: 'Serca Gestión', body: 'El 1 de octubre de 2012, nuestra ONG firma un convenio de colaboración con esta entidad que presta servicios en el ámbito social. Desde entonces se han logrado tres contrataciones de personas con discapacidad a través de nuestra organización.' },
-            { title: 'Drago Integral', body: 'Entidad registrada como Centro Especial de Empleo dedicada a los servicios de limpieza, mantenimiento y jardinería, con convenio firmado con APEDECA el 15 de abril de 2015 para favorecer la contratación de personas en situación de dependencia.' },
-            { title: 'Asociación Creativa', body: 'APEDECA y Asociación Creativa firman el 26 de enero de 2017 un convenio para el desarrollo de acciones de interés social dentro del proyecto “Silene”, de la convocatoria de Programas de Formación en Alternancia con el Empleo.' },
-            { title: 'Asociación ADDIN', body: 'Se contrae acuerdo con la Asociación de Dinamización e Inclusión Social para colaborar conjuntamente en actividades que fomenten el desarrollo de sus fines sociales y prácticas profesionales no laborales.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Otras colaboraciones'} title="Formación y empleo" items={[
-            { title: 'PFAE El Rosario', body: 'Convenio de colaboración para prácticas profesionales no laborales, entre el Ilustre Ayuntamiento del Rosario y la Asociación de Personas Dependientes en Canarias (APEDECA), en el marco del proyecto “PFAE Bienestar en El Rosario”.' },
-            { title: 'PFAE-GJ Domicilia Sociosanitario', body: 'Convenio de colaboración firmado en marzo de 2022 entre la Asociación Domicilia Hernández y la Asociación de Ayuda a Personas en Dependencia en Canarias (APEDECA), para la realización de la prestación de servicios de las y los participantes del Programa de Formación en Alternancia con el Empleo de Garantía Juvenil “PFAE-GJ Domicilia Sociosanitario”, con vigencia hasta febrero de 2023. El alumnado trabajador realizó prácticas laborales en los recursos de la entidad vinculados al C.P. Atención sociosanitaria a personas dependientes en instituciones sociales.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Diversidad Funcional y Mayores'} title="Diversidad funcional y mayores" items={[
-            { title: 'Acuerdo para la puesta en marcha de actividades de promoción de la salud y la participación de mayores y personas dependientes', body: 'Esta mañana se ha llevado a cabo la firma de un convenio de colaboración entre el Ayuntamiento de La Victoria de Acentejo y la Asociación de Ayuda a Personas con Dependencia en Canarias (APEDECA) para la puesta en marcha de un municipio de acciones encaminadas a favorecer la autonomía y la participación de personas mayores y/o con discapacidad. En la reunión para sellar el acuerdo han estado presentes el alcalde victoriero, Juan Antonio García; la concejal de Bienestar Social, Estefanía Fernández; y el presidente y la trabajadora social de APEDECA, Iván Márquez y Laura Hernández, respectivamente. En concreto, a través de esta asociación se llevarán a cabo en La Victoria las iniciativas “Empodera-Actívate III” e “¡Intégrate en positivo!”, que vienen a agrupar una serie de talleres terapéuticos integrales, de salud y bienestar para personas mayores y adultos con diversidad funcional, respectivamente.' },
-            { title: 'Coordicanarias', body: 'Con fecha 13 de agosto de 2021, APEDECA firma nuevo acuerdo con la entidad COORDICANARIAS, para el desarrollo de acciones y proyectos conjuntos en beneficio de las personas con discapacidad física.' },
-            { title: 'Cooperación con la entidad SPORteam Consulting S.L.', body: 'Con fecha 20 de octubre de 2021, APEDECA firma un nuevo acuerdo de cooperación con la entidad SPORteam Consulting S.L. para el desarrollo y ejecución de acciones enmarcadas en el área deportiva dirigidas a favorecer la inclusión social de personas dependientes.' },
-            { title: 'SIMPROMI', body: 'Desde el 27 de septiembre de 2013, APEDECA y Sinpromi firmamos un convenio de colaboración para crear sinergias de trabajo en beneficio de la discapacidad, y desde entonces hemos realizado varias colaboraciones que se continuarán en el futuro.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Otras colaboraciones'} title="Participación y colaboración social" items={[
-            { title: 'CONRED del Ayuntamiento de Santa Cruz de Tenerife', body: 'Proyecto de trabajo cogestionado por las propias asociaciones del municipio y el Ayuntamiento de Santa Cruz de Tenerife. Desde mayo de 2015, APEDECA viene participando en algunas de las acciones que desarrolla en beneficio de la discapacidad.' },
-            { title: 'Plataforma Somos Pacientes', body: 'Somos Pacientes es una comunidad que ofrece un espacio compartido de información, participación, formación, servicios y trabajo colaborativo dirigido a todas las asociaciones de pacientes y personas con discapacidad de España. Nuestra ONG forma parte como colaboradora adscrita desde el 14 de febrero de 2017.' },
-            { title: 'La Laguna Solidaria', body: 'La Laguna Solidaria es una plataforma de entidades sociales comprometidas con el bienestar social de la comunidad. Sesenta asociaciones de todo tipo ponen en común experiencias, formación y compromisos. APEDECA participa activamente en los eventos y actividades que organiza esta plataforma.' },
-            { title: 'Instituto de Atención Sociosanitaria de Tenerife (IASS)', body: 'Desde el IASS se comenzó a trabajar en abril de 2017 en varias mesas de trabajo para avanzar en distintos ámbitos de los servicios sociales. APEDECA es miembro de la mesa SAAD de los servicios de valoración de la dependencia y ha participado en varias reuniones al respecto.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Otras colaboraciones'} title="Colaboraciones" items={[
-            { title: 'Fundación DISA', body: 'En diciembre de 2018 se firmó un acuerdo de colaboración para financiar el proyecto social “Del huerto a la mesa”, para favorecer la alimentación sana y el contacto con la naturaleza de las personas con discapacidad.' },
-            { title: 'Asociación EM Social', body: 'En octubre de 2018 se estableció un convenio con esta asociación de trabajadores sociales para trabajar conjuntamente en la mejora del sistema de dependencia.' },
-            { title: 'Grupo CIO', body: 'Desde el 17 de abril de 2017, nuestra entidad y Grupo CIO – Compañía de las Islas Occidentales, dentro de su área de RSE, firman un acuerdo de colaboración con la intención de ayudar a nuestra entidad en el desarrollo de actividades y proyectos.' },
-            { title: 'Asociación DNT', body: 'El 16 de junio de 2017 se acuerda con esta entidad la realización conjunta de actividades de formación y terapias alternativas.' },
-            { title: 'Fundación CB Canarias', body: 'Se firma en octubre de 2018 un convenio de colaboración con esta Fundación para trabajar en favor de las personas con discapacidad.' },
-            { title: 'Fundación CEPSA', body: 'En abril de 2016 se firma un acuerdo puntual donde esta entidad organiza una actividad en la que participan trabajadores de esta empresa y usuarios con discapacidad.' },
-            { title: 'Eurocampus', body: 'Convenio específico de colaboración entre el centro de formación Eurocampus Formación y Consultoría, S.L. y la Asociación de Ayuda a Personas con Dependencia en Canarias para la realización del módulo de formación en centros de trabajo del alumnado participante en los certificados de profesionalidad.' },
-          ]} />
-          <ConvenioCategory visible={selectedCategory === 'Inscripciones'} id="inscripciones" title="Inscripciones" items={[
-            { title: 'Entidad colaboradora del Gobierno de Canarias', body: 'APEDECA está inscrita desde el 27 de mayo de 2013 como entidad colaboradora del Gobierno de Canarias con número de inscripción TFE 08 1052, cumpliendo con todos los requisitos que ese registro exige.' },
-            { title: 'Entidad colaboradora del Servicio Canario de Empleo', body: 'Desde el 1 de diciembre de 2016, nuestra entidad se encuentra inscrita en el Registro de Entidades Colaboradoras del SCE con número GRS2016CA00001, para poder acceder a ayudas y subvenciones de este área.' },
-            { title: 'Registro Municipal de Entidades Ciudadanas del Ayuntamiento de Santa Cruz de Tenerife', body: 'Inscritos en este registro con nº 1-879 desde el 1 de diciembre de 2015, después de la evaluación favorable de cumplir con todos los requisitos necesarios. Esta inscripción debe ser renovada cada año y nos permite optar a ayudas, subvenciones y participar en las mesas de trabajo del municipio.' },
-            { title: 'Registro Municipal de Entidades Ciudadanas del Ayuntamiento de San Cristóbal de La Laguna', body: 'Inscritos en este registro desde el 14 de junio de 2017 con número 584, después de la evaluación favorable de cumplir con todos los requisitos necesarios.' },
-          ]} />
+          {loading && <p className="py-10 text-center text-slate-500">Cargando colaboraciones…</p>}
+          {!loading && categories.length > 0 && categories.map((cat) => (
+            <ConvenioCategorySection
+              key={cat.id}
+              title={cat.label}
+              entries={entriesByCategory[cat.id] ?? []}
+              visible={selectedCategory === cat.label}
+              id={cat.label === 'Inscripciones' ? 'inscripciones' : undefined}
+            />
+          ))}
+          {!loading && categories.length === 0 && (
+            <p className="py-10 text-center text-slate-500">No hay colaboraciones configuradas todavía.</p>
+          )}
         </div>
       </section>
       <section id="contacto" className="border-t border-slate-100 bg-slate-50 px-6 py-16 text-center">

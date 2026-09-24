@@ -458,3 +458,70 @@ export async function deleteFooterLink(id: string): Promise<void> {
   const { error } = await supabase.from('ape_cms_footer_links').delete().eq('id', id);
   if (error) throw error;
 }
+
+// ===== CONVENIOS =====
+
+export type ConvenioCategory = {
+  id: string;
+  label: string;
+  icon_name: string;
+  tone: 'blue' | 'lime';
+  sort_order: number;
+  is_visible: boolean;
+};
+
+export type ConvenioEntry = {
+  id: string;
+  category_id: string;
+  title: string;
+  body: string | null;
+  image_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+};
+
+export async function fetchConvenioCategories(): Promise<ConvenioCategory[]> {
+  const { data, error } = await supabase.from('ape_convenio_categories').select('*').order('sort_order');
+  if (error) throw error;
+  return data as ConvenioCategory[];
+}
+
+export async function createConvenioCategory(input: { label: string; icon_name: string; tone?: string; sort_order?: number }): Promise<ConvenioCategory> {
+  const { data, error } = await supabase.from('ape_convenio_categories').insert(input).select().single();
+  if (error) throw error;
+  return data as ConvenioCategory;
+}
+
+export async function updateConvenioCategory(id: string, input: Partial<{ label: string; icon_name: string; tone: string; sort_order: number; is_visible: boolean }>): Promise<ConvenioCategory> {
+  const { data, error } = await supabase.from('ape_convenio_categories').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) throw error;
+  return data as ConvenioCategory;
+}
+
+export async function deleteConvenioCategory(id: string): Promise<void> {
+  const { error } = await supabase.from('ape_convenio_categories').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function fetchConvenioEntries(categoryId: string): Promise<ConvenioEntry[]> {
+  const { data, error } = await supabase.from('ape_convenio_entries').select('*').eq('category_id', categoryId).order('sort_order');
+  if (error) throw error;
+  return data as ConvenioEntry[];
+}
+
+export async function createConvenioEntry(input: { category_id: string; title: string; body?: string | null; image_url?: string | null; sort_order?: number }): Promise<ConvenioEntry> {
+  const { data, error } = await supabase.from('ape_convenio_entries').insert(input).select().single();
+  if (error) throw error;
+  return data as ConvenioEntry;
+}
+
+export async function updateConvenioEntry(id: string, input: Partial<{ title: string; body: string | null; image_url: string | null; sort_order: number; is_visible: boolean }>): Promise<ConvenioEntry> {
+  const { data, error } = await supabase.from('ape_convenio_entries').update({ ...input, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+  if (error) throw error;
+  return data as ConvenioEntry;
+}
+
+export async function deleteConvenioEntry(id: string): Promise<void> {
+  const { error } = await supabase.from('ape_convenio_entries').delete().eq('id', id);
+  if (error) throw error;
+}
