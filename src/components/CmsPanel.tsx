@@ -1562,6 +1562,7 @@ function SettingsTab() {
           <Field label="URL Instagram"><input value={settings.instagram_url ?? ''} onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })} className={inputClass} /></Field>
           <Field label="URL LinkedIn"><input value={settings.linkedin_url ?? ''} onChange={(e) => setSettings({ ...settings, linkedin_url: e.target.value })} className={inputClass} /></Field>
           <Field label="URL YouTube"><input value={settings.youtube_url ?? ''} onChange={(e) => setSettings({ ...settings, youtube_url: e.target.value })} className={inputClass} /></Field>
+          <Field label="URL TikTok"><input value={settings.tiktok_url ?? ''} onChange={(e) => setSettings({ ...settings, tiktok_url: e.target.value })} className={inputClass} /></Field>
         </div>
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
         <SaveButton saving={saving} saved={saved} label="Guardar ajustes" />
